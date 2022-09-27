@@ -17,6 +17,15 @@
     <ClCompile Include="..\SharedUtils\SceneLoaderWrapper.cpp">
       <Filter>SharedUtils</Filter>
     </ClCompile>
+    <ClCompile Include="Passes\SinusoidRasterPass.cpp">
+      <Filter>Passes</Filter>
+    </ClCompile>
+    <ClCompile Include="..\SharedUtils\FullscreenLaunch.cpp">
+      <Filter>SharedUtils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\SharedUtils\SimpleVars.cpp">
+      <Filter>SharedUtils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Passes\ConstantColorPass.h">
@@ -34,6 +43,15 @@
     <ClInclude Include="..\SharedUtils\SceneLoaderWrapper.h">
       <Filter>SharedUtils</Filter>
     </ClInclude>
+    <ClInclude Include="Passes\SinusoidRasterPass.h">
+      <Filter>Passes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SharedUtils\FullscreenLaunch.h">
+      <Filter>SharedUtils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\SharedUtils\SimpleVars.h">
+      <Filter>SharedUtils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Passes">
@@ -42,5 +60,13 @@
     <Filter Include="SharedUtils">
       <UniqueIdentifier>{f3c20e23-3e57-4a92-b0a1-1a859aad0bcd}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{b3ebe97c-ee55-4911-80ba-78fa109e1448}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Shaders\sinusoid.ps.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

@@ -16,30 +16,19 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************************************/
 
-// This is the C++ code contain the "main" function for our application.  However,
-//     these main() routines contain little more then setting up our RenderingPipeline,
-//     which defines the sequence of RenderPasses that are executed each frame.
-//
-// This first tutorial only uses a *single* render pass, which clears the screen to 
-//     a constant color
-
-#include "Falcor.h"
-#include "../SharedUtils/RenderingPipeline.h"
-#include "Passes/SinusoidRasterPass.h"
-
-int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nShowCmd)
+// A constant buffer of shader parameters populated from our C++ code
+cbuffer PerFrameCB
 {
-	// Create our rendering pipeline
-	RenderingPipeline *pipeline = new RenderingPipeline();
+    uint gFrameCount;
+	float gMultValue;
+}
 
-	// Add passes into our pipeline
-	pipeline->setPass(0, SinusoidRasterPass::create());
+// Our main pixel shader.  It writes a float4 to the output color buffer (SV_Target0) 
+float4 main(float2 texC : TEXCOORD, float4 pos : SV_Position) : SV_Target0
+{
+	// Compute a per-pixel sinusoidal value
+	float sinusoid = 0.5 * (1.0f + sin(0.001f * gMultValue * (dot(pos.xy, pos.xy) + gFrameCount / gMultValue) ));
 
-	// Define a set of config / window parameters for our program
-    SampleConfig config;
-    config.windowDesc.title = "DirectX Raytracing Path Tracer";
-    config.windowDesc.resizableWindow = true;
-
-	// Start our program!
-	RenderingPipeline::run(pipeline, config);
+	// Save our color out to our framebuffer
+    return float4(sinusoid, sinusoid, sinusoid, 1.0f);
 }
