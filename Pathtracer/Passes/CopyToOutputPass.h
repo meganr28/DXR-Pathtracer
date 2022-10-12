@@ -16,21 +16,34 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************************************/
 
-// A constant buffer of shader parameters populated from our C++ code
-cbuffer PerFrameCB
-{
-    uint gFrameCount;
-	float gMultValue;
-}
+// Displays a full-screen sine pattern that changes over time
 
-// Our main pixel shader.  It writes a float4 to the output color buffer (SV_Target0) 
-float4 main(float2 texC : TEXCOORD, float4 pos : SV_Position) : SV_Target0
-{
-	// Compute a per-pixel sinusoidal value
-	float sinusoid = 0.5 * (1.0f + sin(0.001f * gMultValue * (dot(pos.xy, pos.xy) + gFrameCount / gMultValue) ));
-	//float4 sinusoid = float4(0.5 * (pos.xy + float2(1.0, 1.0)), 0.5 * (sin(gFrameCount * 3.14159 * 0.01) + 1.0), 1.0);
+#pragma once
 
-	// Save our color out to our framebuffer
-    return float4(sinusoid, sinusoid, sinusoid, 0.0);
-	//return sinusoid;
-}
+// This is the header including the base RenderPass class
+#include "../SharedUtils/RenderPass.h"
+
+class CopyToOutputPass : public ::RenderPass, inherit_shared_from_this<::RenderPass, CopyToOutputPass>
+{
+public:
+	using SharedPtr = std::shared_ptr<CopyToOutputPass>;
+
+	static SharedPtr create() { return SharedPtr(new CopyToOutputPass()); }
+	virtual ~CopyToOutputPass() = default;
+
+protected:
+	CopyToOutputPass() : ::RenderPass("Copy-to-Output Pass", "Copy-to-Output Options") {}
+
+	// RenderPass functionality
+	bool initialize(RenderContext* pRenderContext, ResourceManager::SharedPtr pResManager) override;
+	void renderGui(Gui* pGui) override;
+	void pipelineUpdated(ResourceManager::SharedPtr pResManager) override;
+	void execute(RenderContext* pRenderContext) override;
+
+	// Override default RenderPass functionality (that control the rendering pipeline and its GUI)
+	bool appliesPostprocess() override { return true; }  // This pass uses rasterization.      // Removes a GUI control that is confusing for this simple demo
+
+	// Internal state variables for this pass
+	Gui::DropdownList mDisplayableBuffers;
+	uint32_t          mSelectedBuffer = 0xFFFFFFFFu;
+};
