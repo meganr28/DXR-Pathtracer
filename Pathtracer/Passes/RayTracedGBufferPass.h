@@ -16,25 +16,33 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************************************/
 
-#include "Falcor.h"
-#include "../SharedUtils/RenderingPipeline.h"
-#include "Passes/RayTracedGBufferPass.h"
-#include "Passes/CopyToOutputPass.h"
+#pragma once
 
-int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nShowCmd)
+#include "../SharedUtils/RenderPass.h"
+#include "../SharedUtils/SimpleVars.h"
+#include "../SharedUtils/RayLaunch.h"
+
+class RayTracedGBufferPass : public ::RenderPass, inherit_shared_from_this<::RenderPass, RayTracedGBufferPass>
 {
-	// Create our rendering pipeline
-	RenderingPipeline *pipeline = new RenderingPipeline();
+public:
+	using SharedPtr = std::shared_ptr<RayTracedGBufferPass>;
 
-	// Add passes into our pipeline
-	pipeline->setPass(0, RayTracedGBufferPass::create());
-	pipeline->setPass(1, CopyToOutputPass::create()); // allow user to select which GBuffer image to display
+	static SharedPtr create() { return SharedPtr(new RayTracedGBufferPass()); }
+	virtual ~RayTracedGBufferPass() = default;
 
-	// Define a set of config / window parameters for our program
-    SampleConfig config;
-    config.windowDesc.title = "DirectX Raytracing Path Tracer";
-    config.windowDesc.resizableWindow = true;
+protected:
+	RayTracedGBufferPass() : ::RenderPass("Ray Traced G-Buffer Pass", "Ray Traced G-Buffer Options") {}
 
-	// Start our program!
-	RenderingPipeline::run(pipeline, config);
-}
+	// RenderPass functionality
+	bool initialize(RenderContext* pRenderContext, ResourceManager::SharedPtr pResManager) override;
+	void initScene(RenderContext* pRenderContext, Scene::SharedPtr pScene) override;
+	void execute(RenderContext* pRenderContext) override;
+
+	// Override default RenderPass functionality (that control the rendering pipeline and its GUI)
+	bool requiresScene() override { return true; }      // Adds 'load scene' option to GUI.
+	bool usesRayTracing() override { return true; }      // Removes a GUI control that is confusing for this simple demo
+
+	// Internal state variables for this pass
+	RayLaunch::SharedPtr          mpRays;              ///< Wrapper around DXR pass
+	RtScene::SharedPtr            mpScene;             ///< Falcor scene representation, with additions for ray tracing
+};

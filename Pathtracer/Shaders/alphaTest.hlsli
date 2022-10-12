@@ -16,25 +16,29 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************************************/
 
-#include "Falcor.h"
-#include "../SharedUtils/RenderingPipeline.h"
-#include "Passes/RayTracedGBufferPass.h"
-#include "Passes/CopyToOutputPass.h"
-
-int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nShowCmd)
+// This function tests if the alpha test fails, given the attributes of the current hit. 
+//   -> Can legally be called in a DXR any-hit shader or a DXR closest-hit shader, and 
+//      accesses Falcor helpers and data structures to extract and perform the alpha test.
+bool alphaTestFails(BuiltInTriangleIntersectionAttributes attribs)
 {
-	// Create our rendering pipeline
-	RenderingPipeline *pipeline = new RenderingPipeline();
+	// Run a Falcor helper to extract the current hit point's geometric data
+	VertexOut  vsOut = getVertexAttributes(PrimitiveIndex(), attribs);
 
-	// Add passes into our pipeline
-	pipeline->setPass(0, RayTracedGBufferPass::create());
-	pipeline->setPass(1, CopyToOutputPass::create()); // allow user to select which GBuffer image to display
+	// Extracts the diffuse color from the material (the alpha component is opacity)
+    ExplicitLodTextureSampler lodSampler = { 0 };  // Specify the tex lod/mip to use here
+	float4 baseColor = sampleTexture(gMaterial.resources.baseColor, gMaterial.resources.samplerState,
+		vsOut.texC, gMaterial.baseColor, EXTRACT_DIFFUSE_TYPE(gMaterial.flags), lodSampler);
 
-	// Define a set of config / window parameters for our program
-    SampleConfig config;
-    config.windowDesc.title = "DirectX Raytracing Path Tracer";
-    config.windowDesc.resizableWindow = true;
+	// Test if this hit point fails a standard alpha test.  
+	return (baseColor.a < gMaterial.alphaThreshold);
+}
 
-	// Start our program!
-	RenderingPipeline::run(pipeline, config);
+// This function combines two Falcor-defined utility routines into one.  (That does not
+//       require the user to define an additional opaque data type 'VertexOut', which 
+//       is largely irrelevant since ShadingData contains all the important data from
+//       VertexOut)
+ShadingData getShadingData(uint primId, BuiltInTriangleIntersectionAttributes barys)
+{
+	VertexOut  vsOut = getVertexAttributes(primId, barys);
+	return prepareShadingData(vsOut, gMaterial, gCamera.posW, 0);
 }
