@@ -44,6 +44,9 @@
     <ClCompile Include="Passes\AmbientOcclusionPass.cpp">
       <Filter>Passes</Filter>
     </ClCompile>
+    <ClCompile Include="Passes\SimpleAccumulationPass.cpp">
+      <Filter>Passes</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Passes\ConstantColorPass.h">
@@ -88,6 +91,9 @@
     <ClInclude Include="Passes\AmbientOcclusionPass.h">
       <Filter>Passes</Filter>
     </ClInclude>
+    <ClInclude Include="Passes\SimpleAccumulationPass.h">
+      <Filter>Passes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Passes">
@@ -114,6 +120,9 @@
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\aoTracing.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\accumulation.ps.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
   </ItemGroup>

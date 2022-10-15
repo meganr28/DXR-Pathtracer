@@ -16,27 +16,21 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************************************/
 
-#include "Falcor.h"
-#include "../SharedUtils/RenderingPipeline.h"
-#include "Passes/SimpleGBufferPass.h"
-#include "Passes/AmbientOcclusionPass.h"
-#include "Passes/SimpleAccumulationPass.h"
-
-int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nShowCmd)
+// Frame count
+cbuffer PerFrameCB
 {
-	// Create our rendering pipeline
-	RenderingPipeline *pipeline = new RenderingPipeline();
+	uint gAccumCount;
+};
 
-	// Add passes into our pipeline
-	pipeline->setPass(0, SimpleGBufferPass::create());
-	pipeline->setPass(1, AmbientOcclusionPass::create()); // allow user to select which GBuffer image to display
-	pipeline->setPass(2, SimpleAccumulationPass::create(ResourceManager::kOutputChannel));
+Texture2D<float4> gLastFrame;
+Texture2D<float4> gCurFrame;
 
-	// Define a set of config / window parameters for our program
-    SampleConfig config;
-    config.windowDesc.title = "DirectX Raytracing Path Tracer";
-    config.windowDesc.resizableWindow = true;
+float4 main(float2 tex : TEXCOORD, float4 pos : SV_Position) : SV_Target0
+{
+    uint2 pixel = (uint2)pos.xy;
+    float4 curColor = gCurFrame[pixel];
+    float4 prevColor = gLastFrame[pixel];
 
-	// Start our program!
-	RenderingPipeline::run(pipeline, config);
+    return (gAccumCount * prevColor + curColor) / (gAccumCount + 1);
 }
+

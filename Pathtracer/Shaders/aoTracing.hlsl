@@ -51,16 +51,17 @@ float shootAmbientOcclusionRay(float3 origin, float3 direction, float minT, floa
 {
 	// Setup AO payload
 	AORayPayload rayPayload = { 0.f };   // Value returned if we hit a surface
-	RayDesc rayAO;                      
+	RayDesc rayAO;                     
 	rayAO.Origin = origin;               
 	rayAO.Direction = direction;
 	rayAO.TMin = minT;
 	rayAO.TMax = maxT;
 
+	// Tell ray to never run closest hit shader and stop after it finds the first intersection
+	uint rayFlags = RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH | RAY_FLAG_SKIP_CLOSEST_HIT_SHADER;
+
 	// Trace ray; ray stops after its first confirmed hitS
-	TraceRay(gRtScene,
-		RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH | RAY_FLAG_SKIP_CLOSEST_HIT_SHADER,
-		0XFF, 0, hitProgramCount, 0, rayAO, rayPayload);
+	TraceRay(gRtScene, rayFlags, 0XFF, 0, hitProgramCount, 0, rayAO, rayPayload);
 
 	// Copy AO value from payload
 	return rayPayload.aoValue;
