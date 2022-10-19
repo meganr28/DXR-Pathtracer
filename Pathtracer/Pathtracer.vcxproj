@@ -22,10 +22,12 @@
     <ClCompile Include="Passes\AmbientOcclusionPass.cpp" />
     <ClCompile Include="Passes\ConstantColorPass.cpp" />
     <ClCompile Include="Passes\CopyToOutputPass.cpp" />
+    <ClCompile Include="Passes\JitteredGBufferPass.cpp" />
     <ClCompile Include="Passes\RayTracedGBufferPass.cpp" />
     <ClCompile Include="Passes\SimpleAccumulationPass.cpp" />
     <ClCompile Include="Passes\SimpleGBufferPass.cpp" />
     <ClCompile Include="Passes\SinusoidRasterPass.cpp" />
+    <ClCompile Include="Passes\ThinLensGBufferPass.cpp" />
     <ClCompile Include="Pathtracer.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -40,10 +42,12 @@
     <ClInclude Include="Passes\AmbientOcclusionPass.h" />
     <ClInclude Include="Passes\ConstantColorPass.h" />
     <ClInclude Include="Passes\CopyToOutputPass.h" />
+    <ClInclude Include="Passes\JitteredGBufferPass.h" />
     <ClInclude Include="Passes\RayTracedGBufferPass.h" />
     <ClInclude Include="Passes\SimpleAccumulationPass.h" />
     <ClInclude Include="Passes\SimpleGBufferPass.h" />
     <ClInclude Include="Passes\SinusoidRasterPass.h" />
+    <ClInclude Include="Passes\ThinLensGBufferPass.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Falcor\Framework\FalcorSharedObjects\FalcorSharedObjects.vcxproj">
@@ -80,6 +84,10 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">4.0</ShaderModel>
     </FxCompile>
+    <FxCompile Include="Shaders\thinLensGBuffer.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\alphaTest.hlsli">
@@ -87,6 +95,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </None>
     <None Include="Shaders\hlslUtils.hlsli">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </None>
+    <None Include="Shaders\thinLensUtils.hlsli">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </None>

@@ -47,6 +47,12 @@
     <ClCompile Include="Passes\SimpleAccumulationPass.cpp">
       <Filter>Passes</Filter>
     </ClCompile>
+    <ClCompile Include="Passes\JitteredGBufferPass.cpp">
+      <Filter>Passes</Filter>
+    </ClCompile>
+    <ClCompile Include="Passes\ThinLensGBufferPass.cpp">
+      <Filter>Passes</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Passes\ConstantColorPass.h">
@@ -94,6 +100,12 @@
     <ClInclude Include="Passes\SimpleAccumulationPass.h">
       <Filter>Passes</Filter>
     </ClInclude>
+    <ClInclude Include="Passes\JitteredGBufferPass.h">
+      <Filter>Passes</Filter>
+    </ClInclude>
+    <ClInclude Include="Passes\ThinLensGBufferPass.h">
+      <Filter>Passes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Passes">
@@ -125,12 +137,18 @@
     <FxCompile Include="Shaders\accumulation.ps.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\thinLensGBuffer.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\alphaTest.hlsli">
       <Filter>Shaders</Filter>
     </None>
     <None Include="Shaders\hlslUtils.hlsli">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\thinLensUtils.hlsli">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>

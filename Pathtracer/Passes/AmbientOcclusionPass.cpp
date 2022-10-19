@@ -65,7 +65,7 @@ void AmbientOcclusionPass::initScene(RenderContext* pRenderContext, Scene::Share
 	}
 
 	// Set default AO radius when new scene is loaded
-	mAORadius = glm::max(0.1f, mpScene->getRadius() * 0.05f);
+	mAORadius = glm::max(0.5f, mpScene->getRadius() * 0.05f);
 }
 
 void AmbientOcclusionPass::renderGui(Gui* pGui)
