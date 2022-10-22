@@ -53,6 +53,9 @@
     <ClCompile Include="Passes\ThinLensGBufferPass.cpp">
       <Filter>Passes</Filter>
     </ClCompile>
+    <ClCompile Include="Passes\LambertianPass.cpp">
+      <Filter>Passes</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Passes\ConstantColorPass.h">
@@ -106,6 +109,9 @@
     <ClInclude Include="Passes\ThinLensGBufferPass.h">
       <Filter>Passes</Filter>
     </ClInclude>
+    <ClInclude Include="Passes\LambertianPass.h">
+      <Filter>Passes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Passes">
@@ -140,6 +146,9 @@
     <FxCompile Include="Shaders\thinLensGBuffer.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\lambertian.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\alphaTest.hlsli">
@@ -149,6 +158,9 @@
       <Filter>Shaders</Filter>
     </None>
     <None Include="Shaders\thinLensUtils.hlsli">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\lambertianUtils.hlsli">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>
