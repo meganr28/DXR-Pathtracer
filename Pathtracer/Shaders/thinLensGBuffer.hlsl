@@ -18,7 +18,7 @@
 
 #include "HostDeviceSharedMacros.h"
 
-// Utilities for random numberes and alpha testing
+// Utilities for random numbers and alpha testing
 #include "thinLensUtils.hlsli"
 
 #define PI 3.14159265f
@@ -137,5 +137,5 @@ void PrimaryClosestHit(inout SimpleRayPayload, BuiltInTriangleIntersectionAttrib
 	gWsNorm[pixelIndex] = float4(shadeData.N, length(shadeData.posW - gCamera.posW));
 	gMatDif[pixelIndex] = float4(shadeData.diffuse, shadeData.opacity);
 	gMatSpec[pixelIndex] = float4(shadeData.specular, shadeData.linearRoughness);
-	gMatExtra[pixelIndex] = float4(shadeData.IoR, shadeData.doubleSidedMaterial ? 1.f : 0.f, 0.f, 0.f);;
+	gMatExtra[pixelIndex] = float4(shadeData.IoR, shadeData.doubleSidedMaterial ? 1.f : 0.f, 0.f, 0.f);
 }

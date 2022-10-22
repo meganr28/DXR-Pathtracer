@@ -18,7 +18,7 @@
 
 #include "Falcor.h"
 #include "../SharedUtils/RenderingPipeline.h"
-#include "Passes/ThinLensGBufferPass.h"
+#include "Passes/LightProbeGBufferPass.h"
 #include "Passes/LambertianPass.h"
 #include "Passes/SimpleAccumulationPass.h"
 
@@ -28,7 +28,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	RenderingPipeline *pipeline = new RenderingPipeline();
 
 	// Add passes into our pipeline
-	pipeline->setPass(0, ThinLensGBufferPass::create());
+	pipeline->setPass(0, LightProbeGBufferPass::create());
 	pipeline->setPass(1, LambertianPass::create()); // allow user to select which GBuffer image to display
 	pipeline->setPass(2, SimpleAccumulationPass::create(ResourceManager::kOutputChannel));
 
