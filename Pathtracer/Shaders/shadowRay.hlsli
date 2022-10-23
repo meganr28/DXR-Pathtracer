@@ -16,27 +16,50 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************************************/
 
-#include "Falcor.h"
-#include "../SharedUtils/RenderingPipeline.h"
-#include "Passes/LightProbeGBufferPass.h"
-#include "Passes/DiffuseOneShadowRayPass.h"
-#include "Passes/SimpleAccumulationPass.h"
-
-int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nShowCmd)
+struct ShadowRayPayload
 {
-	// Create our rendering pipeline
-	RenderingPipeline *pipeline = new RenderingPipeline();
+	float visFactor;  // 1.0 = fully lit, 0.0 = fully shadow
+};
 
-	// Add passes into our pipeline
-	pipeline->setPass(0, LightProbeGBufferPass::create());
-	pipeline->setPass(1, DiffuseOneShadowRayPass::create()); // allow user to select which GBuffer image to display
-	pipeline->setPass(2, SimpleAccumulationPass::create(ResourceManager::kOutputChannel));
 
-	// Define a set of config / window parameters for our program
-    SampleConfig config;
-    config.windowDesc.title = "DirectX Raytracing Path Tracer";
-    config.windowDesc.resizableWindow = true;
+float shadowRayVisibility(float3 origin, float3 direction, float minT, float maxT)
+{
+	// Setup shadow ray
+	RayDesc ray;
+	ray.Origin = origin;
+	ray.Direction = direction;
+	ray.TMin = minT;
+	ray.TMax = maxT;
 
-	// Start our program!
-	RenderingPipeline::run(pipeline, config);
+	ShadowRayPayload payload = { 0.0f };
+
+	// Check for intersections (we care about any intersection, not just the closest intersection)
+	TraceRay(gRtScene,
+		RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH | RAY_FLAG_SKIP_CLOSEST_HIT_SHADER,
+		0xFF, 0, hitProgramCount, 0, ray, payload);
+
+	return payload.visFactor;
 }
+
+[shader("miss")]
+void ShadowMiss(inout ShadowRayPayload rayData)
+{
+	// Light is visible
+	rayData.visFactor = 1.f;
+}
+
+[shader("anyhit")]
+void ShadowAnyHit(inout ShadowRayPayload rayData, BuiltInTriangleIntersectionAttributes attribs)
+{
+	if (alphaTestFails(attribs))
+	{
+		IgnoreHit();
+	}
+}
+
+[shader("closesthit")]
+void ShadowClosestHit(inout ShadowRayPayload rayData, BuiltInTriangleIntersectionAttributes attribs)
+{
+
+}
+
