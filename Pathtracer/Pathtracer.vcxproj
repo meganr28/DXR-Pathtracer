@@ -29,6 +29,7 @@
     <ClCompile Include="Passes\RayTracedGBufferPass.cpp" />
     <ClCompile Include="Passes\SimpleAccumulationPass.cpp" />
     <ClCompile Include="Passes\SimpleGBufferPass.cpp" />
+    <ClCompile Include="Passes\SimpleGlobalIlluminationPass.cpp" />
     <ClCompile Include="Passes\SinusoidRasterPass.cpp" />
     <ClCompile Include="Passes\ThinLensGBufferPass.cpp" />
     <ClCompile Include="Pathtracer.cpp" />
@@ -52,6 +53,7 @@
     <ClInclude Include="Passes\RayTracedGBufferPass.h" />
     <ClInclude Include="Passes\SimpleAccumulationPass.h" />
     <ClInclude Include="Passes\SimpleGBufferPass.h" />
+    <ClInclude Include="Passes\SimpleGlobalIlluminationPass.h" />
     <ClInclude Include="Passes\SinusoidRasterPass.h" />
     <ClInclude Include="Passes\ThinLensGBufferPass.h" />
   </ItemGroup>
@@ -96,6 +98,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
+    <FxCompile Include="Shaders\simpleGI.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
     <FxCompile Include="Shaders\sinusoid.ps.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">4.0</ShaderModel>
@@ -129,6 +135,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </None>
     <None Include="Shaders\shadowRay.hlsli">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </None>
+    <None Include="Shaders\simpleGIUtils.hlsli">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </None>
