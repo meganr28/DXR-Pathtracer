@@ -68,6 +68,9 @@
     <ClCompile Include="Passes\SimpleToneMappingPass.cpp">
       <Filter>Passes</Filter>
     </ClCompile>
+    <ClCompile Include="Passes\FullGlobalIlluminationPass.cpp">
+      <Filter>Passes</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Passes\ConstantColorPass.h">
@@ -136,6 +139,9 @@
     <ClInclude Include="Passes\SimpleToneMappingPass.h">
       <Filter>Passes</Filter>
     </ClInclude>
+    <ClInclude Include="Passes\FullGlobalIlluminationPass.h">
+      <Filter>Passes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Passes">
@@ -180,6 +186,9 @@
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\simpleGI.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\fullGI.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
   </ItemGroup>
