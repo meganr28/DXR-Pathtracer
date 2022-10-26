@@ -19,43 +19,30 @@
 #pragma once
 
 #include "../SharedUtils/RenderPass.h"
-#include "../SharedUtils/RayLaunch.h"
 
-class SimpleGlobalIlluminationPass : public ::RenderPass, inherit_shared_from_this<::RenderPass, SimpleGlobalIlluminationPass>
+class SimpleToneMappingPass : public ::RenderPass, inherit_shared_from_this<::RenderPass, SimpleToneMappingPass>
 {
 public:
-	using SharedPtr = std::shared_ptr<SimpleGlobalIlluminationPass>;
-	using SharedConstPtr = std::shared_ptr<const SimpleGlobalIlluminationPass>;
+	using SharedPtr = std::shared_ptr<SimpleToneMappingPass>;
+	using SharedConstPtr = std::shared_ptr<const SimpleToneMappingPass>;
 
-	static SharedPtr create(const std::string &outBuf) { return SharedPtr(new SimpleGlobalIlluminationPass(outBuf)); }
-	virtual ~SimpleGlobalIlluminationPass() = default;
+	static SharedPtr create(const std::string &inBuf, const std::string &outBuf) { return SharedPtr(new SimpleToneMappingPass(inBuf, outBuf)); }
+	virtual ~SimpleToneMappingPass() = default;
 
 protected:
-	SimpleGlobalIlluminationPass(const std::string& outBuf);
+	SimpleToneMappingPass(const std::string& inBuf, const std::string& outBuf);
 
 	// RenderPass functionality
 	bool initialize(RenderContext* pRenderContext, ResourceManager::SharedPtr pResManager) override;
-	void initScene(RenderContext* pRenderContext, Scene::SharedPtr pScene) override;
 	void renderGui(Gui* pGui) override;
 	void execute(RenderContext* pRenderContext) override;
 
 	// Override default RenderPass functionality (that control the rendering pipeline and its GUI)
-	bool requiresScene() override { return true; }       // Adds 'load scene' option to GUI.
-	bool usesRayTracing() override { return true; }      // Removes a GUI control that is confusing for this simple demo
-	bool usesEnvironmentMap() override { return true; }  // Use environment map to illuminate the scene
+	bool appliesPostprocess() override { return true; }
 
 	// Internal state variables for this pass
-	RayLaunch::SharedPtr          mpRays;              ///< Wrapper around DXR pass
-	RtScene::SharedPtr            mpScene;             ///< Falcor scene representation, with additions for ray tracing
-
-	// Output buffer
-	std::string                   mOutChannel;
-
-	// User controls to switch on/off certain ray types
-	bool                          mDoIndirectGI = true;
-	bool                          mDoCosSampling = true;
-	bool                          mDoDirectShadows = true;
-													   
-	// Counter to initialize thin lens random numbers each frame
-	uint32_t                      mFrameCount = 0x1456u;                        ///< A frame counter to act as seed for random number generator 
+	std::string                       mInChannel;          ///< Input texture
+	std::string                       mOutChannel;         ///< Output texture
+	GraphicsState::SharedPtr          mpGfxState;          ///< DirectX raster state
+	ToneMapping::SharedPtr            mpToneMapper;        ///< Falcor's tonemapping utility
 };

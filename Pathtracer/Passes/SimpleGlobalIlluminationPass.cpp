@@ -33,6 +33,11 @@ namespace {
 	const char* kEntryIndirectClosestHit = "IndirectClosestHit";
 };
 
+SimpleGlobalIlluminationPass::SimpleGlobalIlluminationPass(const std::string& outBuf)
+	: mOutChannel(outBuf), ::RenderPass("Simple Diffuse Global Illumination Pass", "Simple Diffuse Global Illumination Options")
+{
+}
+
 bool SimpleGlobalIlluminationPass::initialize(RenderContext* pRenderContext, ResourceManager::SharedPtr pResManager)
 {
 	// Stash a copy of our resource manager, allowing us to access shared rendering resources
@@ -40,7 +45,7 @@ bool SimpleGlobalIlluminationPass::initialize(RenderContext* pRenderContext, Res
 
 	// Request texture resources for this pass (Note: We do not need a z-buffer since ray tracing does not generate one by default)
 	mpResManager->requestTextureResources({ "WorldPosition", "WorldNormal", "MaterialDiffuse" });
-	mpResManager->requestTextureResource(ResourceManager::kOutputChannel);
+	mpResManager->requestTextureResource(mOutChannel);
 	mpResManager->requestTextureResource(ResourceManager::kEnvironmentMap);
 
 	// Set the default scene
@@ -92,7 +97,7 @@ void SimpleGlobalIlluminationPass::renderGui(Gui* pGui)
 void SimpleGlobalIlluminationPass::execute(RenderContext* pRenderContext)
 {
 	// Get output buffer and clear it to black
-	Texture::SharedPtr outTex = mpResManager->getClearedTexture(ResourceManager::kOutputChannel, vec4(0.f, 0.f, 0.f, 0.f));
+	Texture::SharedPtr outTex = mpResManager->getClearedTexture(mOutChannel, vec4(0.f, 0.f, 0.f, 0.f));
 
 	// Check that pass is ready to render
 	if (!outTex || !mpRays || !mpRays->readyToRender()) return;

@@ -65,6 +65,9 @@
     <ClCompile Include="Passes\SimpleGlobalIlluminationPass.cpp">
       <Filter>Passes</Filter>
     </ClCompile>
+    <ClCompile Include="Passes\SimpleToneMappingPass.cpp">
+      <Filter>Passes</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Passes\ConstantColorPass.h">
@@ -128,6 +131,9 @@
       <Filter>Passes</Filter>
     </ClInclude>
     <ClInclude Include="Passes\SimpleGlobalIlluminationPass.h">
+      <Filter>Passes</Filter>
+    </ClInclude>
+    <ClInclude Include="Passes\SimpleToneMappingPass.h">
       <Filter>Passes</Filter>
     </ClInclude>
   </ItemGroup>

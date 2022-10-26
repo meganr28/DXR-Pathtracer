@@ -30,6 +30,7 @@
     <ClCompile Include="Passes\SimpleAccumulationPass.cpp" />
     <ClCompile Include="Passes\SimpleGBufferPass.cpp" />
     <ClCompile Include="Passes\SimpleGlobalIlluminationPass.cpp" />
+    <ClCompile Include="Passes\SimpleToneMappingPass.cpp" />
     <ClCompile Include="Passes\SinusoidRasterPass.cpp" />
     <ClCompile Include="Passes\ThinLensGBufferPass.cpp" />
     <ClCompile Include="Pathtracer.cpp" />
@@ -54,6 +55,7 @@
     <ClInclude Include="Passes\SimpleAccumulationPass.h" />
     <ClInclude Include="Passes\SimpleGBufferPass.h" />
     <ClInclude Include="Passes\SimpleGlobalIlluminationPass.h" />
+    <ClInclude Include="Passes\SimpleToneMappingPass.h" />
     <ClInclude Include="Passes\SinusoidRasterPass.h" />
     <ClInclude Include="Passes\ThinLensGBufferPass.h" />
   </ItemGroup>
