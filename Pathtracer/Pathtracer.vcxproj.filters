@@ -71,6 +71,9 @@
     <ClCompile Include="Passes\FullGlobalIlluminationPass.cpp">
       <Filter>Passes</Filter>
     </ClCompile>
+    <ClCompile Include="Passes\BuildCellReservoirsPass.cpp">
+      <Filter>Passes</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Passes\ConstantColorPass.h">
@@ -142,6 +145,9 @@
     <ClInclude Include="Passes\FullGlobalIlluminationPass.h">
       <Filter>Passes</Filter>
     </ClInclude>
+    <ClInclude Include="Passes\BuildCellReservoirsPass.h">
+      <Filter>Passes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Passes">
@@ -191,6 +197,9 @@
     <FxCompile Include="Shaders\fullGI.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\buildCellReservoirs.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\alphaTest.hlsli">
@@ -215,6 +224,9 @@
       <Filter>Shaders</Filter>
     </None>
     <None Include="Shaders\simpleGIUtils.hlsli">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\regirUtils.hlsli">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>

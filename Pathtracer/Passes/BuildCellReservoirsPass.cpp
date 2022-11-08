@@ -16,13 +16,13 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************************************/
 
-#include "FullGlobalIlluminationPass.h"
+#include "BuildCellReservoirsPass.h"
 
 namespace {
-	const char* kFileRayTrace = "Shaders\\fullGI.hlsl";
+	const char* kFileRayTrace = "Shaders\\buildCellReservoirs.hlsl";
 
 	// Function names for shader entry points
-	const char* kEntryPointRayGen = "FullGIRayGen";
+	const char* kEntryPointRayGen = "BuildCellReservoirsRayGen";
 	
 	const char* kEntryPointMiss0 = "ShadowMiss";
 	const char* kEntryShadowAnyHit = "ShadowAnyHit";
@@ -33,18 +33,18 @@ namespace {
 	const char* kEntryIndirectClosestHit = "IndirectClosestHit";
 };
 
-FullGlobalIlluminationPass::FullGlobalIlluminationPass(const std::string& outBuf)
-	: mOutChannel(outBuf), ::RenderPass("Full Global Illumination Pass", "Full Global Illumination Options")
+BuildCellReservoirsPass::BuildCellReservoirsPass(const std::string& outBuf)
+	: mOutChannel(outBuf), ::RenderPass("Build Cell Reservoirs Pass", "Build Cell Reservoirs Options")
 {
 }
 
-bool FullGlobalIlluminationPass::initialize(RenderContext* pRenderContext, ResourceManager::SharedPtr pResManager)
+bool BuildCellReservoirsPass::initialize(RenderContext* pRenderContext, ResourceManager::SharedPtr pResManager)
 {
 	// Stash a copy of our resource manager, allowing us to access shared rendering resources
 	mpResManager = pResManager;
 
 	// Request texture resources for this pass (Note: We do not need a z-buffer since ray tracing does not generate one by default)
-	mpResManager->requestTextureResources({ "WorldPosition", "WorldNormal", "MaterialDiffuse" });
+	mpResManager->requestTextureResources({ "WorldPosition", "WorldNormal", "MaterialDiffuse", "LightGrid"});
 	mpResManager->requestTextureResource(mOutChannel);
 	mpResManager->requestTextureResource(ResourceManager::kEnvironmentMap);
 
@@ -70,7 +70,7 @@ bool FullGlobalIlluminationPass::initialize(RenderContext* pRenderContext, Resou
 	return true;
 }
 
-void FullGlobalIlluminationPass::initScene(RenderContext* pRenderContext, Scene::SharedPtr pScene)
+void BuildCellReservoirsPass::initScene(RenderContext* pRenderContext, Scene::SharedPtr pScene)
 {
 	// Save copy of scene
 	if (pScene) {
@@ -83,17 +83,17 @@ void FullGlobalIlluminationPass::initScene(RenderContext* pRenderContext, Scene:
 	}
 }
 
-void FullGlobalIlluminationPass::renderGui(Gui* pGui)
+void BuildCellReservoirsPass::renderGui(Gui* pGui)
 {
 	int dirty = 0;
 	// User-controlled max depth
-	dirty |= (int)pGui->addIntVar("Max Ray Depth", mRayDepth, 0, mMaxRayDepth);
+	//dirty |= (int)pGui->addIntVar("Max Ray Depth", mRayDepth, 0, mMaxRayDepth);
 	// Checkbox to determine if we are shooting indirect rays or not
-	dirty |= (int)pGui->addCheckBox(mDoIndirectLighting ? "Enable Direct Illumination" : "Enable Indirect Illumination", mDoIndirectLighting);
+	//dirty |= (int)pGui->addCheckBox(mDoIndirectLighting ? "Enable Direct Illumination" : "Enable Indirect Illumination", mDoIndirectLighting);
 	if (dirty) setRefreshFlag();
 }
 
-void FullGlobalIlluminationPass::execute(RenderContext* pRenderContext)
+void BuildCellReservoirsPass::execute(RenderContext* pRenderContext)
 {
 	// Get output buffer and clear it to black
 	Texture::SharedPtr outTex = mpResManager->getClearedTexture(mOutChannel, vec4(0.f, 0.f, 0.f, 0.f));
@@ -115,6 +115,9 @@ void FullGlobalIlluminationPass::execute(RenderContext* pRenderContext)
 	globalVars["gNorm"]       = mpResManager->getTexture("WorldNormal");
 	globalVars["gDiffuseMtl"] = mpResManager->getTexture("MaterialDiffuse");
 	globalVars["gEmissive"]   = mpResManager->getTexture("Emissive");
+
+	// Pass ReGIR grid structure for updating
+	globalVars["gLightGrid"]  = mpResManager->getTexture("LightGrid");
 
 	globalVars["gOutput"]     = outTex;
 
