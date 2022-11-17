@@ -20,6 +20,9 @@
 #include "../SharedUtils/RenderingPipeline.h"
 #include "Passes/LightProbeGBufferPass.h"
 #include "Passes/BuildCellReservoirsPass.h"
+//#include "Passes/SampleLightGridPass.h"
+#include "Passes/CreateLightSamplesPass.h"
+#include "Passes/ShadeWithReservoirsPass.h"
 #include "Passes/SimpleAccumulationPass.h"
 #include "Passes/SimpleToneMappingPass.h"
 
@@ -29,9 +32,12 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	RenderingPipeline *pipeline = new RenderingPipeline();
 
 	// Add passes into our pipeline
-	pipeline->setPass(0, LightProbeGBufferPass::create());
-	pipeline->setPass(1, BuildCellReservoirsPass::create("HDRColorOutput")); // build grid reservoirs
-	pipeline->setPass(2, SimpleToneMappingPass::create("HDRColorOutput", ResourceManager::kOutputChannel));
+	pipeline->setPass(0, LightProbeGBufferPass::create()); // TODO: change to ray traced g-buffer pass
+	//pipeline->setPass(1, BuildCellReservoirsPass::create("HDRColorOutput")); // build grid reservoirs and temporal reuse
+	//pipeline->setPass(2, SampleLightGridPass::create("HDRColorOutput")); // use grid to perform shading
+	pipeline->setPass(1, CreateLightSamplesPass::create("HDRColorOutput")); // build grid reservoirs and temporal reuse
+	pipeline->setPass(2, ShadeWithReservoirsPass::create("HDRColorOutput")); // use grid to perform shading
+	pipeline->setPass(3, SimpleToneMappingPass::create("HDRColorOutput", ResourceManager::kOutputChannel));
 
 	// Define a set of config / window parameters for our program
     SampleConfig config;

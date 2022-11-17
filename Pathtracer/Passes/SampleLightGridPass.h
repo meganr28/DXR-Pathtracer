@@ -3,17 +3,17 @@
 #include "../SharedUtils/RenderPass.h"
 #include "../SharedUtils/RayLaunch.h"
 
-class BuildCellReservoirsPass : public ::RenderPass, inherit_shared_from_this<::RenderPass, BuildCellReservoirsPass>
+class SampleLightGridPass : public ::RenderPass, inherit_shared_from_this<::RenderPass, SampleLightGridPass>
 {
 public:
-	using SharedPtr = std::shared_ptr<BuildCellReservoirsPass>;
-	using SharedConstPtr = std::shared_ptr<const BuildCellReservoirsPass>;
+	using SharedPtr = std::shared_ptr<SampleLightGridPass>;
+	using SharedConstPtr = std::shared_ptr<const SampleLightGridPass>;
 
-	static SharedPtr create(const std::string &outBuf) { return SharedPtr(new BuildCellReservoirsPass(outBuf)); }
-	virtual ~BuildCellReservoirsPass() = default;
+	static SharedPtr create(const std::string &outBuf) { return SharedPtr(new SampleLightGridPass(outBuf)); }
+	virtual ~SampleLightGridPass() = default;
 
 protected:
-	BuildCellReservoirsPass(const std::string& outBuf);
+	SampleLightGridPass(const std::string& outBuf);
 
 	// RenderPass functionality
 	bool initialize(RenderContext* pRenderContext, ResourceManager::SharedPtr pResManager) override;

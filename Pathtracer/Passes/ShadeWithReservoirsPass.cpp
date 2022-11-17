@@ -1,10 +1,10 @@
-#include "BuildCellReservoirsPass.h"
+#include "ShadeWithReservoirsPass.h"
 
 namespace {
-	const char* kFileRayTrace = "Shaders\\buildCellReservoirs.hlsl";
+	const char* kFileRayTrace = "Shaders\\shadeWithReservoirs.hlsl";
 
 	// Function names for shader entry points
-	const char* kEntryPointRayGen = "BuildCellReservoirsRayGen";
+	const char* kEntryPointRayGen = "ShadeWithReservoirsRayGen";
 	
 	const char* kEntryPointMiss0 = "ShadowMiss";
 	const char* kEntryShadowAnyHit = "ShadowAnyHit";
@@ -15,12 +15,12 @@ namespace {
 	const char* kEntryIndirectClosestHit = "IndirectClosestHit";
 };
 
-BuildCellReservoirsPass::BuildCellReservoirsPass(const std::string& outBuf)
-	: mOutChannel(outBuf), ::RenderPass("Build Cell Reservoirs Pass", "Build Cell Reservoirs Options")
+ShadeWithReservoirsPass::ShadeWithReservoirsPass(const std::string& outBuf)
+	: mOutChannel(outBuf), ::RenderPass("Shade With Reservoirs Pass", "Shade With Reservoirs Options")
 {
 }
 
-bool BuildCellReservoirsPass::initialize(RenderContext* pRenderContext, ResourceManager::SharedPtr pResManager)
+bool ShadeWithReservoirsPass::initialize(RenderContext* pRenderContext, ResourceManager::SharedPtr pResManager)
 {
 	// Stash a copy of our resource manager, allowing us to access shared rendering resources
 	mpResManager = pResManager;
@@ -52,7 +52,7 @@ bool BuildCellReservoirsPass::initialize(RenderContext* pRenderContext, Resource
 	return true;
 }
 
-void BuildCellReservoirsPass::initScene(RenderContext* pRenderContext, Scene::SharedPtr pScene)
+void ShadeWithReservoirsPass::initScene(RenderContext* pRenderContext, Scene::SharedPtr pScene)
 {
 	// Save copy of scene
 	if (pScene) {
@@ -65,17 +65,17 @@ void BuildCellReservoirsPass::initScene(RenderContext* pRenderContext, Scene::Sh
 	}
 }
 
-void BuildCellReservoirsPass::renderGui(Gui* pGui)
+void ShadeWithReservoirsPass::renderGui(Gui* pGui)
 {
 	int dirty = 0;
 	// User-controlled max depth
-	dirty |= (int)pGui->addIntVar("Max Ray Depth", mRayDepth, 0, mMaxRayDepth);
+	//dirty |= (int)pGui->addIntVar("Max Ray Depth", mRayDepth, 0, mMaxRayDepth);
 	// Checkbox to determine if we are shooting indirect rays or not
-	dirty |= (int)pGui->addCheckBox(mDoIndirectLighting ? "Enable Direct Illumination" : "Enable Indirect Illumination", mDoIndirectLighting);
+	//dirty |= (int)pGui->addCheckBox(mDoIndirectLighting ? "Enable Direct Illumination" : "Enable Indirect Illumination", mDoIndirectLighting);
 	if (dirty) setRefreshFlag();
 }
 
-void BuildCellReservoirsPass::execute(RenderContext* pRenderContext)
+void ShadeWithReservoirsPass::execute(RenderContext* pRenderContext)
 {
 	// Get output buffer and clear it to black
 	Texture::SharedPtr outTex = mpResManager->getClearedTexture(mOutChannel, vec4(0.f, 0.f, 0.f, 0.f));

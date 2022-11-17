@@ -74,6 +74,15 @@
     <ClCompile Include="Passes\BuildCellReservoirsPass.cpp">
       <Filter>Passes</Filter>
     </ClCompile>
+    <ClCompile Include="Passes\SampleLightGridPass.cpp">
+      <Filter>Passes</Filter>
+    </ClCompile>
+    <ClCompile Include="Passes\CreateLightSamplesPass.cpp">
+      <Filter>Passes</Filter>
+    </ClCompile>
+    <ClCompile Include="Passes\ShadeWithReservoirsPass.cpp">
+      <Filter>Passes</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Passes\ConstantColorPass.h">
@@ -148,6 +157,15 @@
     <ClInclude Include="Passes\BuildCellReservoirsPass.h">
       <Filter>Passes</Filter>
     </ClInclude>
+    <ClInclude Include="Passes\SampleLightGridPass.h">
+      <Filter>Passes</Filter>
+    </ClInclude>
+    <ClInclude Include="Passes\CreateLightSamplesPass.h">
+      <Filter>Passes</Filter>
+    </ClInclude>
+    <ClInclude Include="Passes\ShadeWithReservoirsPass.h">
+      <Filter>Passes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Passes">
@@ -200,6 +218,15 @@
     <FxCompile Include="Shaders\buildCellReservoirs.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\sampleLightGrid.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\createLightSamples.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\shadeWithReservoirs.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\alphaTest.hlsli">
@@ -227,6 +254,9 @@
       <Filter>Shaders</Filter>
     </None>
     <None Include="Shaders\regirUtils.hlsli">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\restirUtils.hlsli">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>

@@ -1,10 +1,10 @@
-#include "BuildCellReservoirsPass.h"
+#include "CreateLightSamplesPass.h"
 
 namespace {
-	const char* kFileRayTrace = "Shaders\\buildCellReservoirs.hlsl";
+	const char* kFileRayTrace = "Shaders\\createLightSamples.hlsl";
 
 	// Function names for shader entry points
-	const char* kEntryPointRayGen = "BuildCellReservoirsRayGen";
+	const char* kEntryPointRayGen = "CreateLightSamplesRayGen";
 	
 	const char* kEntryPointMiss0 = "ShadowMiss";
 	const char* kEntryShadowAnyHit = "ShadowAnyHit";
@@ -15,12 +15,12 @@ namespace {
 	const char* kEntryIndirectClosestHit = "IndirectClosestHit";
 };
 
-BuildCellReservoirsPass::BuildCellReservoirsPass(const std::string& outBuf)
-	: mOutChannel(outBuf), ::RenderPass("Build Cell Reservoirs Pass", "Build Cell Reservoirs Options")
+CreateLightSamplesPass::CreateLightSamplesPass(const std::string& outBuf)
+	: mOutChannel(outBuf), ::RenderPass("Create Light Samples Pass", "Create Light Samples Options")
 {
 }
 
-bool BuildCellReservoirsPass::initialize(RenderContext* pRenderContext, ResourceManager::SharedPtr pResManager)
+bool CreateLightSamplesPass::initialize(RenderContext* pRenderContext, ResourceManager::SharedPtr pResManager)
 {
 	// Stash a copy of our resource manager, allowing us to access shared rendering resources
 	mpResManager = pResManager;
@@ -52,7 +52,7 @@ bool BuildCellReservoirsPass::initialize(RenderContext* pRenderContext, Resource
 	return true;
 }
 
-void BuildCellReservoirsPass::initScene(RenderContext* pRenderContext, Scene::SharedPtr pScene)
+void CreateLightSamplesPass::initScene(RenderContext* pRenderContext, Scene::SharedPtr pScene)
 {
 	// Save copy of scene
 	if (pScene) {
@@ -65,17 +65,15 @@ void BuildCellReservoirsPass::initScene(RenderContext* pRenderContext, Scene::Sh
 	}
 }
 
-void BuildCellReservoirsPass::renderGui(Gui* pGui)
+void CreateLightSamplesPass::renderGui(Gui* pGui)
 {
 	int dirty = 0;
-	// User-controlled max depth
-	dirty |= (int)pGui->addIntVar("Max Ray Depth", mRayDepth, 0, mMaxRayDepth);
-	// Checkbox to determine if we are shooting indirect rays or not
-	dirty |= (int)pGui->addCheckBox(mDoIndirectLighting ? "Enable Direct Illumination" : "Enable Indirect Illumination", mDoIndirectLighting);
+	// User-controlled number of light samples (M)
+	dirty |= (int)pGui->addIntVar("M", mLightSamples, 0, 32); // TODO: change this to scene lights count
 	if (dirty) setRefreshFlag();
 }
 
-void BuildCellReservoirsPass::execute(RenderContext* pRenderContext)
+void CreateLightSamplesPass::execute(RenderContext* pRenderContext)
 {
 	// Get output buffer and clear it to black
 	Texture::SharedPtr outTex = mpResManager->getClearedTexture(mOutChannel, vec4(0.f, 0.f, 0.f, 0.f));
