@@ -26,7 +26,7 @@ bool CreateLightSamplesPass::initialize(RenderContext* pRenderContext, ResourceM
 	mpResManager = pResManager;
 
 	// Request texture resources for this pass (Note: We do not need a z-buffer since ray tracing does not generate one by default)
-	mpResManager->requestTextureResources({ "WorldPosition", "WorldNormal", "MaterialDiffuse", "LightGrid"});
+	mpResManager->requestTextureResources({ "WorldPosition", "WorldNormal", "MaterialDiffuse", "CurrReservoirs"});
 	mpResManager->requestTextureResource(mOutChannel);
 	mpResManager->requestTextureResource(ResourceManager::kEnvironmentMap);
 
@@ -88,6 +88,7 @@ void CreateLightSamplesPass::execute(RenderContext* pRenderContext)
 	globalVars["GlobalCB"]["gDoIndirectLighting"] = mDoIndirectLighting;
 	globalVars["GlobalCB"]["gDoDirectLighting"] = mDoDirectLighting;
 	globalVars["GlobalCB"]["gMaxDepth"] = mRayDepth;
+	globalVars["GlobalCB"]["gLightSamples"] = mLightSamples;
 	globalVars["GlobalCB"]["gEmitMult"] = 1.0f;
 	
 	// Pass G-Buffer textures to shader
@@ -97,9 +98,9 @@ void CreateLightSamplesPass::execute(RenderContext* pRenderContext)
 	globalVars["gEmissive"]   = mpResManager->getTexture("Emissive");
 
 	// Pass ReGIR grid structure for updating
-	globalVars["gLightGrid"]  = mpResManager->getTexture("LightGrid");
+	globalVars["gCurrReservoirs"]  = mpResManager->getTexture("CurrReservoirs");
 
-	globalVars["gOutput"]     = outTex;
+	//globalVars["gOutput"]     = outTex;
 
 	// Set environment map texture for indirect illumination
 	globalVars["gEnvMap"] = mpResManager->getTexture(ResourceManager::kEnvironmentMap);

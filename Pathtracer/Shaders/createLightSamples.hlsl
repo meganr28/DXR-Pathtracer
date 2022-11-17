@@ -17,6 +17,7 @@
 **********************************************************************************************************************/
 #include "HostDeviceSharedMacros.h"
 #include "HostDeviceData.h"
+#include "restirUtils.hlsli"
 #include "simpleGIUtils.hlsli"
 #include "shadowRay.hlsli"
 
@@ -33,7 +34,7 @@ shared cbuffer GlobalCB
 	bool  gDoIndirectLighting;  // Should we shoot indirect rays?
 	bool  gDoDirectLighting; // Should we shoot shadow rays?
 	uint  gMaxDepth;      // Max recursion depth
-	uint  gLightSamples;
+	uint  gLightSamples;  // M candidate samples
 	float gEmitMult;      // Multiply emissive channel by this channel
 }
 
@@ -42,8 +43,8 @@ shared Texture2D<float4>   gPos;           // G-buffer world-space position
 shared Texture2D<float4>   gNorm;          // G-buffer world-space normal
 shared Texture2D<float4>   gDiffuseMtl;    // G-buffer diffuse material
 shared Texture2D<float4>   gEmissive;
-shared RWTexture2D<float4> gLightGrid;        // Output to store shaded result
-shared RWTexture2D<float4> gOutput;        // Output to store shaded result
+shared RWTexture2D<float4> gCurrReservoirs;        // Output to store shaded result
+//shared RWTexture2D<float4> gOutput;        // Output to store shaded result
 
 // Environment map
 shared Texture2D<float4>   gEnvMap;
@@ -178,22 +179,31 @@ void CreateLightSamplesRayGen()
 	// Initialize random number generator
 	uint randSeed = initRand(pixelIndex.x + dim.x * pixelIndex.y, gFrameCount, 16);
 
+	Reservoir reservoir = { 0, 0, 0, 0 };
 	float3 shadeColor = float3(0.f, 0.f, 0.f);
 	if (worldPos.w != 0)
 	{
-		// Add emissive color to primary rays
-		shadeColor = gEmitMult * emissiveData.rgb;
+		// To hold information about current light
+		float dist;
+		float3 lightIntensity;
+		float3 lightDirection;
 
-		// Direct lighting
-		if (gDoDirectLighting)
-		{
-			shadeColor += lambertianDirect(randSeed, worldPos.xyz, worldNorm.xyz, difMatlColor.rgb);
-		}
+		// Generate initial candidate light samples
+		for (int i = 0; i < gLightSamples; i++) {
+			// Randomly pick a light to sample
+			int light = min(int(nextRand(randSeed) * gLightsCount), gLightsCount - 1);
+			getLightData(light, worldPos.xyz, lightDirection, lightIntensity, dist);
 
-		// Indirect lighting
-		if (gDoIndirectLighting && gMaxDepth > 0)
-		{
-			shadeColor += lambertianIndirect(randSeed, worldPos.xyz, worldNorm.xyz, difMatlColor.rgb, 0);
+			// Calcuate light weight based on BRDF and PDF
+			float pdf = 1.f / float(gLightsCount);
+			float cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
+
+			float3 f = difMatlColor.rgb / M_PI;
+			float3 Le = lightIntensity;
+			float G = cosTheta / (dist * dist);
+			float3 brdf = (f * Le * G) / pdf;
+			float w = length(brdf);
+			updateReservoir(reservoir, w, float(light), randSeed);
 		}
 	}
 	else
@@ -201,5 +211,5 @@ void CreateLightSamplesRayGen()
 		shadeColor = albedo;
 	}
 
-	gLightGrid[pixelIndex] = float4(shadeColor, 1.f);
+	gCurrReservoirs[pixelIndex] = float4(reservoir.lightSample, reservoir.M, reservoir.weight, reservoir.totalWeight);
 }

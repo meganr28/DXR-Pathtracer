@@ -26,7 +26,7 @@ bool ShadeWithReservoirsPass::initialize(RenderContext* pRenderContext, Resource
 	mpResManager = pResManager;
 
 	// Request texture resources for this pass (Note: We do not need a z-buffer since ray tracing does not generate one by default)
-	mpResManager->requestTextureResources({ "WorldPosition", "WorldNormal", "MaterialDiffuse", "LightGrid"});
+	mpResManager->requestTextureResources({ "WorldPosition", "WorldNormal", "MaterialDiffuse", "CurrReservoirs"});
 	mpResManager->requestTextureResource(mOutChannel);
 	mpResManager->requestTextureResource(ResourceManager::kEnvironmentMap);
 
@@ -99,7 +99,7 @@ void ShadeWithReservoirsPass::execute(RenderContext* pRenderContext)
 	globalVars["gEmissive"]   = mpResManager->getTexture("Emissive");
 
 	// Pass ReGIR grid structure for updating
-	globalVars["gLightGrid"]  = mpResManager->getTexture("LightGrid");
+	globalVars["gCurrReservoirs"]  = mpResManager->getTexture("CurrReservoirs");
 
 	globalVars["gOutput"]     = outTex;
 

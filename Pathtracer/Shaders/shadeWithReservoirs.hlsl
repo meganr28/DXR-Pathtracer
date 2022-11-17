@@ -41,7 +41,7 @@ shared Texture2D<float4>   gPos;           // G-buffer world-space position
 shared Texture2D<float4>   gNorm;          // G-buffer world-space normal
 shared Texture2D<float4>   gDiffuseMtl;    // G-buffer diffuse material
 shared Texture2D<float4>   gEmissive;
-shared Texture2D<float4>   gLightGrid;
+shared Texture2D<float4>   gCurrReservoirs;
 shared RWTexture2D<float4> gOutput;        // Output to store shaded result
 
 // Environment map
@@ -177,11 +177,31 @@ void ShadeWithReservoirsRayGen()
 	// Initialize random number generator
 	uint randSeed = initRand(pixelIndex.x + dim.x * pixelIndex.y, gFrameCount, 16);
 
-	float3 shadeColor = albedo;
+	float3 shadeColor = float3(0.f, 0.f, 0.f);
 	if (worldPos.w != 0)
 	{
-		//shadeColor = gLightGrid[pixelIndex].xyz;
+		// Do shading with light stored in reservoir
+		float dist;
+		float3 lightIntensity;
+		float3 lightDirection;
+
+		int lightSample = gCurrReservoirs[pixelIndex].x;
+		getLightData(lightSample, worldPos.xyz, lightDirection, lightIntensity, dist);
+
+		// Lambertian dot product
+		float cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
+
+		// Shoot shadow ray
+		float shadow = shadowRayVisibility(worldPos.xyz, lightDirection, gMinT, dist);
+
+		// Compute Lambertian shading color (divide by probability of light = 1.0 / N)
+		shadeColor = gLightsCount * shadow * cosTheta * lightIntensity;
+		shadeColor *= albedo / M_PI;
+	}
+	else 
+	{
+		shadeColor = albedo;
 	}
 	
-	gOutput[pixelIndex] = gLightGrid[pixelIndex];
+	gOutput[pixelIndex] = float4(shadeColor, 1.f);
 }

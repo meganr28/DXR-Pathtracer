@@ -20,11 +20,12 @@
 #include "../SharedUtils/RenderingPipeline.h"
 #include "Passes/LightProbeGBufferPass.h"
 #include "Passes/BuildCellReservoirsPass.h"
-//#include "Passes/SampleLightGridPass.h"
+#include "Passes/SampleLightGridPass.h"
 #include "Passes/CreateLightSamplesPass.h"
 #include "Passes/ShadeWithReservoirsPass.h"
 #include "Passes/SimpleAccumulationPass.h"
 #include "Passes/SimpleToneMappingPass.h"
+#include "Passes/FullGlobalIlluminationPass.h"
 
 int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nShowCmd)
 {
@@ -37,6 +38,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	//pipeline->setPass(2, SampleLightGridPass::create("HDRColorOutput")); // use grid to perform shading
 	pipeline->setPass(1, CreateLightSamplesPass::create("HDRColorOutput")); // build grid reservoirs and temporal reuse
 	pipeline->setPass(2, ShadeWithReservoirsPass::create("HDRColorOutput")); // use grid to perform shading
+	//pipeline->setPass(1, FullGlobalIlluminationPass::create("HDRColorOutput")); 
 	pipeline->setPass(3, SimpleToneMappingPass::create("HDRColorOutput", ResourceManager::kOutputChannel));
 
 	// Define a set of config / window parameters for our program
