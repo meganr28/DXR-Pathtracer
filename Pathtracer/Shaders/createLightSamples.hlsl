@@ -245,7 +245,7 @@ void CreateLightSamplesRayGen()
 			}
 
 			float shadowed = shadowRayVisibility(worldPos.xyz, lightDirection, gMinT, dist);
-			if (shadowed < 1.0f) {
+			if (shadowed < 0.001f) {
 				reservoir.weight = 0.f;
 			}
 
@@ -255,23 +255,18 @@ void CreateLightSamplesRayGen()
 				Reservoir tempReservoir = { 0, 0, 0, 0 };
 				//tempReservoir = combineReservoirs(reservoir, prev_reservoir, randSeed);
 
-				//// Current reservoir
+				// Add current reservoir
 				//getLightData(reservoir.lightSample, worldPos.xyz, lightDirection, lightIntensity, dist);
 				//cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
 				//p_hat = length((difMatlColor.rgb / M_PI) * lightIntensity * cosTheta / (dist * dist));
-				updateReservoir(tempReservoir, reservoir.lightSample, p_hat * reservoir.weight * reservoir.M, randSeed);
+				updateReservoir(tempReservoir, p_hat * reservoir.weight * reservoir.M, reservoir.lightSample, randSeed);
 
-				// Previous reservoir
+				// Add previous reservoir
 				getLightData(prev_reservoir.lightSample, worldPos.xyz, lightDirection, lightIntensity, dist);
 				cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
 				p_hat = length((difMatlColor.rgb / M_PI) * lightIntensity * cosTheta / (dist * dist));
-				//prev_reservoir.M = min(20.f * reservoir.M, prev_reservoir.M);
-				if (prev_reservoir.M > 20 * reservoir.M)
-				{
-					prev_reservoir.totalWeight *= 20 * reservoir.M / prev_reservoir.M;
-					prev_reservoir.M = 20 * reservoir.M;
-				}
-				updateReservoir(tempReservoir, prev_reservoir.lightSample, p_hat * prev_reservoir.weight * prev_reservoir.M, randSeed);
+				prev_reservoir.M = min(20.f * reservoir.M, prev_reservoir.M);
+				updateReservoir(tempReservoir, p_hat * prev_reservoir.weight * prev_reservoir.M, prev_reservoir.lightSample, randSeed);
 
 				// Update M
 				tempReservoir.M = reservoir.M + prev_reservoir.M;
