@@ -38,7 +38,6 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	//pipeline->setPass(2, SampleLightGridPass::create("HDRColorOutput")); // use grid to perform shading
 	pipeline->setPass(1, CreateLightSamplesPass::create("HDRColorOutput")); // build grid reservoirs and temporal reuse
 	pipeline->setPass(2, ShadeWithReservoirsPass::create("HDRColorOutput")); // use grid to perform shading
-	//pipeline->setPass(1, FullGlobalIlluminationPass::create("HDRColorOutput")); 
 	pipeline->setPass(3, SimpleToneMappingPass::create("HDRColorOutput", ResourceManager::kOutputChannel));
 
 	// Define a set of config / window parameters for our program

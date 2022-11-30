@@ -21,6 +21,8 @@
 #include "simpleGIUtils.hlsli"
 #include "shadowRay.hlsli"
 
+#define PI 3.14159265f
+
 // Include and import common Falcor utilities and data structures
 import Raytracing;                   // Shared ray tracing specific functions & data
 import ShaderCommon;                 // Shared shading data structures
@@ -29,13 +31,18 @@ import Lights;                       // Light structures for our current scene
 
 shared cbuffer GlobalCB
 {
+	float4x4 gLastCameraMatrix;
 	float gMinT;          // Avoid ray self-intersection
 	uint  gFrameCount;    // Frame counter to act as random seed 
-	bool  gDoIndirectLighting;  // Should we shoot indirect rays?
-	bool  gDoDirectLighting; // Should we shoot shadow rays?
 	uint  gMaxDepth;      // Max recursion depth
 	uint  gLightSamples;  // M candidate samples
 	float gEmitMult;      // Multiply emissive channel by this channel
+
+	bool  gDoIndirectLighting;  // Should we shoot indirect rays?
+	bool  gDoDirectLighting; // Should we shoot shadow rays?
+	bool  gEnableReSTIR;
+	bool  gDoVisibilityReuse;
+	bool  gDoTemporalReuse;
 }
 
 // Input and output textures
@@ -44,7 +51,7 @@ shared Texture2D<float4>   gNorm;          // G-buffer world-space normal
 shared Texture2D<float4>   gDiffuseMtl;    // G-buffer diffuse material
 shared Texture2D<float4>   gEmissive;
 shared RWTexture2D<float4> gCurrReservoirs;        // Output to store shaded result
-//shared RWTexture2D<float4> gOutput;        // Output to store shaded result
+shared RWTexture2D<float4> gPrevReservoirs;        // Output to store shaded result
 
 // Environment map
 shared Texture2D<float4>   gEnvMap;
@@ -188,22 +195,104 @@ void CreateLightSamplesRayGen()
 		float3 lightIntensity;
 		float3 lightDirection;
 
-		// Generate initial candidate light samples
-		for (int i = 0; i < gLightSamples; i++) {
-			// Randomly pick a light to sample
-			int light = min(int(nextRand(randSeed) * gLightsCount), gLightsCount - 1);
-			getLightData(light, worldPos.xyz, lightDirection, lightIntensity, dist);
+		if (gEnableReSTIR)
+		{
+			// Get previous reservoir
+			Reservoir prev_reservoir = { 0, 0, 0, 0 };
 
-			// Calcuate light weight based on BRDF and PDF
-			float pdf = 1.f / float(gLightsCount);
+			if (gFrameCount > 0)
+			{
+				float4 prevScreenPos = mul(worldPos, gLastCameraMatrix);
+				prevScreenPos / prevScreenPos.w;
+
+				uint2 prevIndex = pixelIndex;
+				//prevIndex.x = ((prevScreenPos.x + 1.f) * 0.5f) * (float)dim.x;
+				//prevIndex.y = ((1.f - prevScreenPos.y) * 0.5f) * (float)dim.y;
+
+				if (prevIndex.x >= 0 && prevIndex.x < dim.x && prevIndex.y >= 0 && prevIndex.y < dim.y) {
+					prev_reservoir = createReservoir(gPrevReservoirs[prevIndex]);
+				}
+			}
+
+			// Generate initial candidate light samples
+			for (int i = 0; i < min(gLightsCount, gLightSamples); i++) {
+				// Randomly pick a light to sample
+				int light = min(int(nextRand(randSeed) * gLightsCount), gLightsCount - 1);
+				getLightData(light, worldPos.xyz, lightDirection, lightIntensity, dist);
+
+				// Calcuate light weight based on BRDF and PDF
+				float pdf = 1.f / float(gLightsCount);
+				float cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
+
+				float3 f = difMatlColor.rgb / M_PI;
+				float3 Le = lightIntensity;
+				float G = cosTheta / (dist * dist);
+				float3 brdf = f * Le * G;
+				float p_hat = length(brdf);
+				updateReservoir(reservoir, p_hat, float(light), randSeed);
+			}
+
+			// Evaluate visibility for initial candidates
+			getLightData(reservoir.lightSample, worldPos.xyz, lightDirection, lightIntensity, dist);
 			float cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
+			float p_hat = length((difMatlColor.rgb / M_PI) * lightIntensity * cosTheta / (dist * dist));
 
-			float3 f = difMatlColor.rgb / M_PI;
-			float3 Le = lightIntensity;
-			float G = cosTheta / (dist * dist);
-			float3 brdf = (f * Le * G) / pdf;
-			float w = length(brdf);
-			updateReservoir(reservoir, w, float(light), randSeed);
+			if (p_hat == 0) {
+				reservoir.weight = 0.f;
+			}
+			else {
+				reservoir.weight = (1.f / p_hat) * (reservoir.totalWeight / reservoir.M);
+			}
+
+			float shadowed = shadowRayVisibility(worldPos.xyz, lightDirection, gMinT, dist);
+			if (shadowed < 1.0f) {
+				reservoir.weight = 0.f;
+			}
+
+			if (gDoTemporalReuse)
+			{
+				// Temporal reuse
+				Reservoir tempReservoir = { 0, 0, 0, 0 };
+				//tempReservoir = combineReservoirs(reservoir, prev_reservoir, randSeed);
+
+				//// Current reservoir
+				//getLightData(reservoir.lightSample, worldPos.xyz, lightDirection, lightIntensity, dist);
+				//cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
+				//p_hat = length((difMatlColor.rgb / M_PI) * lightIntensity * cosTheta / (dist * dist));
+				updateReservoir(tempReservoir, reservoir.lightSample, p_hat * reservoir.weight * reservoir.M, randSeed);
+
+				// Previous reservoir
+				getLightData(prev_reservoir.lightSample, worldPos.xyz, lightDirection, lightIntensity, dist);
+				cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
+				p_hat = length((difMatlColor.rgb / M_PI) * lightIntensity * cosTheta / (dist * dist));
+				//prev_reservoir.M = min(20.f * reservoir.M, prev_reservoir.M);
+				if (prev_reservoir.M > 20 * reservoir.M)
+				{
+					prev_reservoir.totalWeight *= 20 * reservoir.M / prev_reservoir.M;
+					prev_reservoir.M = 20 * reservoir.M;
+				}
+				updateReservoir(tempReservoir, prev_reservoir.lightSample, p_hat * prev_reservoir.weight * prev_reservoir.M, randSeed);
+
+				// Update M
+				tempReservoir.M = reservoir.M + prev_reservoir.M;
+
+				// Set weight
+				getLightData(tempReservoir.lightSample, worldPos.xyz, lightDirection, lightIntensity, dist);
+				cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
+				p_hat = length((difMatlColor.rgb / M_PI) * lightIntensity * cosTheta / (dist * dist));
+
+				if (p_hat == 0.f) {
+					tempReservoir.weight = 0.f;
+				}
+				else {
+					tempReservoir.weight = (1.f / p_hat) * (tempReservoir.totalWeight / tempReservoir.M);
+				}
+				reservoir = tempReservoir;
+			}				
+		}
+		else
+		{
+			shadeColor += lambertianDirect(randSeed, worldPos.xyz, worldNorm.xyz, difMatlColor.rgb);
 		}
 	}
 	else
@@ -211,5 +300,10 @@ void CreateLightSamplesRayGen()
 		shadeColor = albedo;
 	}
 
-	gCurrReservoirs[pixelIndex] = float4(reservoir.lightSample, reservoir.M, reservoir.weight, reservoir.totalWeight);
+	gCurrReservoirs[pixelIndex] = float4(shadeColor, 1.f);
+
+	if (gEnableReSTIR)
+	{
+		gCurrReservoirs[pixelIndex] = float4(reservoir.lightSample, reservoir.M, reservoir.weight, reservoir.totalWeight);
+	}
 }

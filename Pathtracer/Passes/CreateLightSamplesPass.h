@@ -25,6 +25,7 @@ protected:
 	bool requiresScene() override { return true; }       // Adds 'load scene' option to GUI.
 	bool usesRayTracing() override { return true; }      // Removes a GUI control that is confusing for this simple demo
 	bool usesEnvironmentMap() override { return true; }  // Use environment map to illuminate the scene
+	bool hasCameraMoved();                               // Determine if there has been any camera motion.
 
 	// Internal state variables for this pass
 	RayLaunch::SharedPtr          mpRays;              ///< Wrapper around DXR pass
@@ -36,10 +37,14 @@ protected:
 	// User controls to switch on/off certain ray types
 	bool                          mDoIndirectLighting = true;
 	bool                          mDoDirectLighting = true;
+	bool                          mEnableReSTIR = true;
+	bool                          mDoVisibilityReuse = true;
+	bool                          mDoTemporalReuse = true;
 		
 	int32_t                       mLightSamples = 32;  ///< Number of initial candidates (M)
 	int32_t                       mRayDepth = 1;       ///< Current max. ray depth
 	const int32_t                 mMaxRayDepth = 8;    ///< Max supported ray depth
+	mat4                          mpLastCameraMatrix;
 	
 	// Counter to initialize thin lens random numbers each frame
 	uint32_t                      mFrameCount = 0x1456u;                        ///< A frame counter to act as seed for random number generator 

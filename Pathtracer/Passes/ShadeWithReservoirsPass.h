@@ -36,6 +36,7 @@ protected:
 	// User controls to switch on/off certain ray types
 	bool                          mDoIndirectLighting = true;
 	bool                          mDoDirectLighting = true;
+	bool                          mEnableReSTIR = true;
 													   
 	int32_t                       mRayDepth = 1;       ///< Current max. ray depth
 	const int32_t                 mMaxRayDepth = 8;    ///< Max supported ray depth

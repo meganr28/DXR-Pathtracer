@@ -9,7 +9,7 @@ public:
 	using SharedPtr = std::shared_ptr<BuildCellReservoirsPass>;
 	using SharedConstPtr = std::shared_ptr<const BuildCellReservoirsPass>;
 
-	static SharedPtr create(const std::string &outBuf) { return SharedPtr(new BuildCellReservoirsPass(outBuf)); }
+	static SharedPtr create(const std::string& outBuf) { return SharedPtr(new BuildCellReservoirsPass(outBuf)); }
 	virtual ~BuildCellReservoirsPass() = default;
 
 protected:
@@ -25,21 +25,24 @@ protected:
 	bool requiresScene() override { return true; }       // Adds 'load scene' option to GUI.
 	bool usesRayTracing() override { return true; }      // Removes a GUI control that is confusing for this simple demo
 	bool usesEnvironmentMap() override { return true; }  // Use environment map to illuminate the scene
+	bool usesCompute() override { return true;  }        // Uses a compute pass to construct the world-space grid
 
 	// Internal state variables for this pass
 	RayLaunch::SharedPtr          mpRays;              ///< Wrapper around DXR pass
 	RtScene::SharedPtr            mpScene;             ///< Falcor scene representation, with additions for ray tracing
-
-	// Output buffer
-	std::string                   mOutChannel;
-
-	// User controls to switch on/off certain ray types
-	bool                          mDoIndirectLighting = true;
-	bool                          mDoDirectLighting = true;
-													   
-	int32_t                       mRayDepth = 1;       ///< Current max. ray depth
-	const int32_t                 mMaxRayDepth = 8;    ///< Max supported ray depth
 	
-	// Counter to initialize thin lens random numbers each frame
-	uint32_t                      mFrameCount = 0x1456u;                        ///< A frame counter to act as seed for random number generator 
+	int32_t                       mRayDepth = 1;       ///< Current max. ray depth
+
+	//ComputeVars::SharedPtr        mpComputeVars;       ///< Falcor compute vars representation
+	//ComputeState::SharedPtr       mpComputeState;      ///< Falcor compute state representation
+
+	struct
+	{
+		ComputeState::SharedPtr pComputeState;
+		ComputeProgram::SharedPtr pComputeProgram;
+		ComputeVars::SharedPtr pComputeVars;
+	} mInitReservoirsPass;
+
+	// Compute output channel
+	std::string                   mOutChannel;
 };

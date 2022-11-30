@@ -26,7 +26,7 @@ bool ShadeWithReservoirsPass::initialize(RenderContext* pRenderContext, Resource
 	mpResManager = pResManager;
 
 	// Request texture resources for this pass (Note: We do not need a z-buffer since ray tracing does not generate one by default)
-	mpResManager->requestTextureResources({ "WorldPosition", "WorldNormal", "MaterialDiffuse", "CurrReservoirs"});
+	mpResManager->requestTextureResources({ "WorldPosition", "WorldNormal", "MaterialDiffuse", "CurrReservoirs", "PrevReservoirs"});
 	mpResManager->requestTextureResource(mOutChannel);
 	mpResManager->requestTextureResource(ResourceManager::kEnvironmentMap);
 
@@ -68,10 +68,8 @@ void ShadeWithReservoirsPass::initScene(RenderContext* pRenderContext, Scene::Sh
 void ShadeWithReservoirsPass::renderGui(Gui* pGui)
 {
 	int dirty = 0;
-	// User-controlled max depth
-	//dirty |= (int)pGui->addIntVar("Max Ray Depth", mRayDepth, 0, mMaxRayDepth);
-	// Checkbox to determine if we are shooting indirect rays or not
-	//dirty |= (int)pGui->addCheckBox(mDoIndirectLighting ? "Enable Direct Illumination" : "Enable Indirect Illumination", mDoIndirectLighting);
+	// Checkbox to determine if we are using ReSTIR or not
+	dirty |= (int)pGui->addCheckBox(mEnableReSTIR ? "Show Direct Lighting" : "Show ReSTIR", mEnableReSTIR);
 	if (dirty) setRefreshFlag();
 }
 
@@ -89,6 +87,7 @@ void ShadeWithReservoirsPass::execute(RenderContext* pRenderContext)
 	globalVars["GlobalCB"]["gFrameCount"] = mFrameCount++;
 	globalVars["GlobalCB"]["gDoIndirectLighting"] = mDoIndirectLighting;
 	globalVars["GlobalCB"]["gDoDirectLighting"] = mDoDirectLighting;
+	globalVars["GlobalCB"]["gEnableReSTIR"] = mEnableReSTIR;
 	globalVars["GlobalCB"]["gMaxDepth"] = mRayDepth;
 	globalVars["GlobalCB"]["gEmitMult"] = 1.0f;
 	
@@ -100,6 +99,7 @@ void ShadeWithReservoirsPass::execute(RenderContext* pRenderContext)
 
 	// Pass ReGIR grid structure for updating
 	globalVars["gCurrReservoirs"]  = mpResManager->getTexture("CurrReservoirs");
+	globalVars["gPrevReservoirs"] = mpResManager->getTexture("PrevReservoirs");
 
 	globalVars["gOutput"]     = outTex;
 

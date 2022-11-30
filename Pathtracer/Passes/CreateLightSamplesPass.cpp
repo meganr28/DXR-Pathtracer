@@ -26,7 +26,7 @@ bool CreateLightSamplesPass::initialize(RenderContext* pRenderContext, ResourceM
 	mpResManager = pResManager;
 
 	// Request texture resources for this pass (Note: We do not need a z-buffer since ray tracing does not generate one by default)
-	mpResManager->requestTextureResources({ "WorldPosition", "WorldNormal", "MaterialDiffuse", "CurrReservoirs"});
+	mpResManager->requestTextureResources({ "WorldPosition", "WorldNormal", "MaterialDiffuse", "CurrReservoirs", "PrevReservoirs"});
 	mpResManager->requestTextureResource(mOutChannel);
 	mpResManager->requestTextureResource(ResourceManager::kEnvironmentMap);
 
@@ -70,7 +70,21 @@ void CreateLightSamplesPass::renderGui(Gui* pGui)
 	int dirty = 0;
 	// User-controlled number of light samples (M)
 	dirty |= (int)pGui->addIntVar("M", mLightSamples, 0, 32); // TODO: change this to scene lights count
+	// Enable/disable different passes
+	dirty |= (int)pGui->addCheckBox(mEnableReSTIR ? "Show Direct Lighting" : "Show ReSTIR", mEnableReSTIR);
+	dirty |= (int)pGui->addCheckBox(mDoVisibilityReuse ? "Disable Visibility Reuse" : "Enable Visibility Reuse", mDoVisibilityReuse);
+	dirty |= (int)pGui->addCheckBox(mDoTemporalReuse ? "Disable Temporal Reuse" : "Enable Temporal Reuse", mDoTemporalReuse);
 	if (dirty) setRefreshFlag();
+}
+
+bool CreateLightSamplesPass::hasCameraMoved()
+{
+	if (!mpScene || !mpScene->getActiveCamera())
+	{
+		return false;
+	}
+	bool hasCameraChanged = (mpLastCameraMatrix != mpScene->getActiveCamera()->getViewMatrix());
+	return hasCameraChanged;
 }
 
 void CreateLightSamplesPass::execute(RenderContext* pRenderContext)
@@ -81,15 +95,25 @@ void CreateLightSamplesPass::execute(RenderContext* pRenderContext)
 	// Check that pass is ready to render
 	if (!outTex || !mpRays || !mpRays->readyToRender()) return;
 
+	if (hasCameraMoved())
+	{
+		mpLastCameraMatrix = mpScene->getActiveCamera()->getViewMatrix();
+	}
+
 	// Pass background color to miss shader #0
 	auto globalVars = mpRays->getGlobalVars();
 	globalVars["GlobalCB"]["gMinT"] = mpResManager->getMinTDist();
 	globalVars["GlobalCB"]["gFrameCount"] = mFrameCount++;
-	globalVars["GlobalCB"]["gDoIndirectLighting"] = mDoIndirectLighting;
-	globalVars["GlobalCB"]["gDoDirectLighting"] = mDoDirectLighting;
 	globalVars["GlobalCB"]["gMaxDepth"] = mRayDepth;
 	globalVars["GlobalCB"]["gLightSamples"] = mLightSamples;
 	globalVars["GlobalCB"]["gEmitMult"] = 1.0f;
+	globalVars["GlobalCB"]["gLastCameraMatrix"] = mpLastCameraMatrix;
+
+	globalVars["GlobalCB"]["gDoIndirectLighting"] = mDoIndirectLighting;
+	globalVars["GlobalCB"]["gDoDirectLighting"] = mDoDirectLighting;
+	globalVars["GlobalCB"]["gEnableReSTIR"] = mEnableReSTIR;
+	globalVars["GlobalCB"]["gDoVisiblityReuse"] = mDoVisibilityReuse;
+	globalVars["GlobalCB"]["gDoTemporalReuse"] = mDoTemporalReuse;
 	
 	// Pass G-Buffer textures to shader
 	globalVars["gPos"]        = mpResManager->getTexture("WorldPosition");
@@ -99,6 +123,7 @@ void CreateLightSamplesPass::execute(RenderContext* pRenderContext)
 
 	// Pass ReGIR grid structure for updating
 	globalVars["gCurrReservoirs"]  = mpResManager->getTexture("CurrReservoirs");
+	globalVars["gPrevReservoirs"]  = mpResManager->getTexture("PrevReservoirs");
 
 	//globalVars["gOutput"]     = outTex;
 

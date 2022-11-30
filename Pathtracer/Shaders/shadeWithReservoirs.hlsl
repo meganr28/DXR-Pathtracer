@@ -34,6 +34,7 @@ shared cbuffer GlobalCB
 	bool  gDoDirectLighting; // Should we shoot shadow rays?
 	uint  gMaxDepth;      // Max recursion depth
 	float gEmitMult;      // Multiply emissive channel by this channel
+	bool  gEnableReSTIR;
 }
 
 // Input and output textures
@@ -42,6 +43,7 @@ shared Texture2D<float4>   gNorm;          // G-buffer world-space normal
 shared Texture2D<float4>   gDiffuseMtl;    // G-buffer diffuse material
 shared Texture2D<float4>   gEmissive;
 shared Texture2D<float4>   gCurrReservoirs;
+shared RWTexture2D<float4> gPrevReservoirs;
 shared RWTexture2D<float4> gOutput;        // Output to store shaded result
 
 // Environment map
@@ -177,26 +179,37 @@ void ShadeWithReservoirsRayGen()
 	// Initialize random number generator
 	uint randSeed = initRand(pixelIndex.x + dim.x * pixelIndex.y, gFrameCount, 16);
 
+	// Set previous reservoir
+	float4 reservoir = gCurrReservoirs[pixelIndex];
+	gPrevReservoirs[pixelIndex] = reservoir;
+
 	float3 shadeColor = float3(0.f, 0.f, 0.f);
 	if (worldPos.w != 0)
 	{
-		// Do shading with light stored in reservoir
-		float dist;
-		float3 lightIntensity;
-		float3 lightDirection;
+		if (gEnableReSTIR)
+		{
+			// Do shading with light stored in reservoir
+			float dist;
+			float3 lightIntensity;
+			float3 lightDirection;
 
-		int lightSample = gCurrReservoirs[pixelIndex].x;
-		getLightData(lightSample, worldPos.xyz, lightDirection, lightIntensity, dist);
+			int lightSample = gCurrReservoirs[pixelIndex].x;
+			getLightData(lightSample, worldPos.xyz, lightDirection, lightIntensity, dist);
 
-		// Lambertian dot product
-		float cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
+			// Lambertian dot product
+			float cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
 
-		// Shoot shadow ray
-		float shadow = shadowRayVisibility(worldPos.xyz, lightDirection, gMinT, dist);
+			// Shoot shadow ray
+			float shadow = shadowRayVisibility(worldPos.xyz, lightDirection, gMinT, dist);
 
-		// Compute Lambertian shading color (divide by probability of light = 1.0 / N)
-		shadeColor = gLightsCount * shadow * cosTheta * lightIntensity;
-		shadeColor *= albedo / M_PI;
+			// Compute Lambertian shading color (divide by probability of light = 1.0 / N)
+			shadeColor = gLightsCount * shadow * cosTheta * lightIntensity * gCurrReservoirs[pixelIndex].z;
+			shadeColor *= albedo / M_PI;
+		}
+		else
+		{
+			shadeColor = gCurrReservoirs[pixelIndex].xyz;
+		}
 	}
 	else 
 	{
