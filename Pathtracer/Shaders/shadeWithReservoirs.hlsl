@@ -203,8 +203,9 @@ void ShadeWithReservoirsRayGen()
 			float shadow = shadowRayVisibility(worldPos.xyz, lightDirection, gMinT, dist);
 
 			// Compute Lambertian shading color (divide by probability of light = 1.0 / N)
-			shadeColor = gLightsCount * shadow * cosTheta * lightIntensity * gCurrReservoirs[pixelIndex].z;
+			shadeColor = shadow * cosTheta * lightIntensity * gCurrReservoirs[pixelIndex].z;
 			shadeColor *= albedo / M_PI;
+			shadeColor /= dist * dist;
 		}
 		else
 		{

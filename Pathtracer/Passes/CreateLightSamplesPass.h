@@ -44,6 +44,7 @@ protected:
 	int32_t                       mLightSamples = 32;  ///< Number of initial candidates (M)
 	int32_t                       mRayDepth = 1;       ///< Current max. ray depth
 	const int32_t                 mMaxRayDepth = 8;    ///< Max supported ray depth
+	
 	mat4                          mpLastCameraMatrix;
 	
 	// Counter to initialize thin lens random numbers each frame

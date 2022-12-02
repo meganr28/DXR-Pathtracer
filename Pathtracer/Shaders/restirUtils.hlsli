@@ -17,7 +17,7 @@ Reservoir createReservoir(in float4 res)
 
 // RIS
 
-void updateReservoir(inout Reservoir input, in float weight, in float light, in uint randSeed) {
+void updateReservoir(inout Reservoir input, in float weight, in float light, inout uint randSeed) {
 	input.totalWeight += weight;
 	input.M++;
 	if (nextRand(randSeed) < (weight / input.totalWeight)) {

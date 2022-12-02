@@ -52,11 +52,27 @@ bool CreateLightSamplesPass::initialize(RenderContext* pRenderContext, ResourceM
 	return true;
 }
 
+bool CreateLightSamplesPass::hasCameraMoved()
+{
+	if (!mpScene || !mpScene->getActiveCamera())
+	{
+		return false;
+	}
+	bool hasCameraChanged = (mpLastCameraMatrix != mpScene->getActiveCamera()->getViewProjMatrix());
+	return hasCameraChanged;
+}
+
 void CreateLightSamplesPass::initScene(RenderContext* pRenderContext, Scene::SharedPtr pScene)
 {
 	// Save copy of scene
 	if (pScene) {
 		mpScene = std::dynamic_pointer_cast<RtScene>(pScene);
+	}
+
+	// Get copy of scene's camera matrix
+	if (mpScene && mpScene->getActiveCamera())
+	{
+		mpLastCameraMatrix = mpScene->getActiveCamera()->getViewProjMatrix();
 	}
 
 	// Pass scene to ray tracer
@@ -77,16 +93,6 @@ void CreateLightSamplesPass::renderGui(Gui* pGui)
 	if (dirty) setRefreshFlag();
 }
 
-bool CreateLightSamplesPass::hasCameraMoved()
-{
-	if (!mpScene || !mpScene->getActiveCamera())
-	{
-		return false;
-	}
-	bool hasCameraChanged = (mpLastCameraMatrix != mpScene->getActiveCamera()->getViewMatrix());
-	return hasCameraChanged;
-}
-
 void CreateLightSamplesPass::execute(RenderContext* pRenderContext)
 {
 	// Get output buffer and clear it to black
@@ -97,7 +103,7 @@ void CreateLightSamplesPass::execute(RenderContext* pRenderContext)
 
 	if (hasCameraMoved())
 	{
-		mpLastCameraMatrix = mpScene->getActiveCamera()->getViewMatrix();
+		mpLastCameraMatrix = mpScene->getActiveCamera()->getViewProjMatrix();
 	}
 
 	// Pass background color to miss shader #0

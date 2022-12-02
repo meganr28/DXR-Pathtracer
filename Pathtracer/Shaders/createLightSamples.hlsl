@@ -132,6 +132,7 @@ float3 lambertianDirect(inout uint rndSeed, float3 hit, float3 norm, float3 diff
 	// Compute Lambertian shading color (divide by probability of light = 1.0 / N)
 	float3 color = gLightsCount * shadow * cosTheta * lightIntensity;
 	color *= diffuseColor / M_PI;
+	color /= dist * dist;
 
 	return color;
 }
@@ -197,6 +198,9 @@ void CreateLightSamplesRayGen()
 
 		if (gEnableReSTIR)
 		{
+			float cosTheta = 0.f;
+			float p_hat = 0.f;
+
 			// Get previous reservoir
 			Reservoir prev_reservoir = { 0, 0, 0, 0 };
 
@@ -206,8 +210,8 @@ void CreateLightSamplesRayGen()
 				prevScreenPos / prevScreenPos.w;
 
 				uint2 prevIndex = pixelIndex;
-				//prevIndex.x = ((prevScreenPos.x + 1.f) * 0.5f) * (float)dim.x;
-				//prevIndex.y = ((1.f - prevScreenPos.y) * 0.5f) * (float)dim.y;
+				/*prevIndex.x = ((prevScreenPos.x + 1.f) * 0.5f) * (float)dim.x;
+				prevIndex.y = ((1.f - prevScreenPos.y) * 0.5f) * (float)dim.y;*/
 
 				if (prevIndex.x >= 0 && prevIndex.x < dim.x && prevIndex.y >= 0 && prevIndex.y < dim.y) {
 					prev_reservoir = createReservoir(gPrevReservoirs[prevIndex]);
@@ -215,50 +219,49 @@ void CreateLightSamplesRayGen()
 			}
 
 			// Generate initial candidate light samples
-			for (int i = 0; i < min(gLightsCount, gLightSamples); i++) {
+			for (int i = 0; i < min(gLightsCount, 32); i++) {
 				// Randomly pick a light to sample
 				int light = min(int(nextRand(randSeed) * gLightsCount), gLightsCount - 1);
 				getLightData(light, worldPos.xyz, lightDirection, lightIntensity, dist);
 
 				// Calcuate light weight based on BRDF and PDF
-				float pdf = 1.f / float(gLightsCount);
-				float cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
+				float p = 1.f / float(gLightsCount);
+				cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
 
 				float3 f = difMatlColor.rgb / M_PI;
 				float3 Le = lightIntensity;
 				float G = cosTheta / (dist * dist);
 				float3 brdf = f * Le * G;
-				float p_hat = length(brdf);
+				p_hat = length(brdf) / p;
 				updateReservoir(reservoir, p_hat, float(light), randSeed);
 			}
 
-			// Evaluate visibility for initial candidates
+			// Calculate p_hat for reservoir's light
 			getLightData(reservoir.lightSample, worldPos.xyz, lightDirection, lightIntensity, dist);
-			float cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
-			float p_hat = length((difMatlColor.rgb / M_PI) * lightIntensity * cosTheta / (dist * dist));
+			cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
+			p_hat = length((difMatlColor.rgb / M_PI) * lightIntensity * cosTheta / (dist * dist));
 
-			if (p_hat == 0) {
+			if (p_hat == 0.f) {
 				reservoir.weight = 0.f;
 			}
 			else {
 				reservoir.weight = (1.f / p_hat) * (reservoir.totalWeight / reservoir.M);
 			}
 
+			// Evaluate visibility for initial candidates
 			float shadowed = shadowRayVisibility(worldPos.xyz, lightDirection, gMinT, dist);
-			if (shadowed < 0.001f) {
+			if (shadowed <= 0.001f) {
 				reservoir.weight = 0.f;
 			}
 
+			// TODO: make combining reservoirs into its own function
+			// tempReservoir = combineReservoirs(reservoir, prev_reservoir, randSeed);
 			if (gDoTemporalReuse)
 			{
 				// Temporal reuse
 				Reservoir tempReservoir = { 0, 0, 0, 0 };
-				//tempReservoir = combineReservoirs(reservoir, prev_reservoir, randSeed);
 
 				// Add current reservoir
-				//getLightData(reservoir.lightSample, worldPos.xyz, lightDirection, lightIntensity, dist);
-				//cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
-				//p_hat = length((difMatlColor.rgb / M_PI) * lightIntensity * cosTheta / (dist * dist));
 				updateReservoir(tempReservoir, p_hat * reservoir.weight * reservoir.M, reservoir.lightSample, randSeed);
 
 				// Add previous reservoir
