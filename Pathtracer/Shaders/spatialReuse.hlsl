@@ -17,8 +17,12 @@
 **********************************************************************************************************************/
 #include "HostDeviceSharedMacros.h"
 #include "HostDeviceData.h"
+#include "restirUtils.hlsli"
 #include "simpleGIUtils.hlsli"
 #include "shadowRay.hlsli"
+
+#define PI                 3.14159265f
+#define SPATIAL_NEIGHBORS  5
 
 // Include and import common Falcor utilities and data structures
 import Raytracing;                   // Shared ray tracing specific functions & data
@@ -30,11 +34,10 @@ shared cbuffer GlobalCB
 {
 	float gMinT;          // Avoid ray self-intersection
 	uint  gFrameCount;    // Frame counter to act as random seed 
-	bool  gDoIndirectLighting;  // Should we shoot indirect rays?
-	bool  gDoDirectLighting; // Should we shoot shadow rays?
-	bool  gEnableReSTIR;
 	uint  gMaxDepth;      // Max recursion depth
 	float gEmitMult;      // Multiply emissive channel by this channel
+
+	bool  gEnableReSTIR;  
 }
 
 // Input and output textures
@@ -42,67 +45,11 @@ shared Texture2D<float4>   gPos;           // G-buffer world-space position
 shared Texture2D<float4>   gNorm;          // G-buffer world-space normal
 shared Texture2D<float4>   gDiffuseMtl;    // G-buffer diffuse material
 shared Texture2D<float4>   gEmissive;
-shared Texture2D<float4>   gSpatialReservoirs;
-shared RWTexture2D<float4> gPrevReservoirs;
-shared RWTexture2D<float4> gOutput;        // Output to store shaded result
+shared RWTexture2D<float4> gCurrReservoirs;        // Output to store shaded result
+shared RWTexture2D<float4> gSpatialReservoirs;     // Output to store shaded result
 
 // Environment map
 shared Texture2D<float4>   gEnvMap;
-
-struct IndirectRayPayload
-{
-	float3 color;
-	uint randSeed;
-	uint rayDepth;
-};
-
-[shader("miss")]
-void IndirectMiss(inout IndirectRayPayload rayData)
-{
-	float2 dim;
-	gEnvMap.GetDimensions(dim.x, dim.y);
-
-	// Convert ray direction to (u, v) coordinate
-	float2 uv = wsVectorToLatLong(WorldRayDirection());
-
-	// Set environment map color as ray color
-	rayData.color = gEnvMap[uint2(uv * dim)].rgb;
-}
-
-[shader("anyhit")]
-void IndirectAnyHit(inout IndirectRayPayload rayData, BuiltInTriangleIntersectionAttributes attribs)
-{
-	// If we hit a transparent texel, ignore the hit; otherwise, accept
-	if (alphaTestFails(attribs)) IgnoreHit();
-}
-
-float3 shootIndirectRay(float3 rayOrigin, float3 rayDir, float minT, uint seed, uint curDepth)
-{
-	// Setup indirect ray
-	RayDesc rayThroughput;
-	rayThroughput.Origin = rayOrigin;
-	rayThroughput.Direction = rayDir;
-	rayThroughput.TMin = minT;
-	rayThroughput.TMax = 1e+38f;
-
-	// Initialize payload
-	IndirectRayPayload rayData;
-	rayData.color = float3(0, 0, 0);
-	rayData.randSeed = seed;
-	rayData.rayDepth = curDepth + 1;
-
-	// Trace ray (using hit group and miss shader #1)
-	TraceRay(gRtScene,
-		0,
-		0XFF,
-		1,
-		hitProgramCount,
-		1,
-		rayThroughput,
-		rayData);
-
-	return rayData.color;
-}
 
 float3 lambertianDirect(inout uint rndSeed, float3 hit, float3 norm, float3 diffuseColor)
 {
@@ -125,44 +72,13 @@ float3 lambertianDirect(inout uint rndSeed, float3 hit, float3 norm, float3 diff
 	// Compute Lambertian shading color (divide by probability of light = 1.0 / N)
 	float3 color = gLightsCount * shadow * cosTheta * lightIntensity;
 	color *= diffuseColor / M_PI;
+	color /= dist * dist;
 
 	return color;
 }
 
-float3 lambertianIndirect(inout uint rndSeed, float3 hit, float3 norm, float3 diffuseColor, uint depth)
-{
-	// Use cosine-weighted hemisphere sampling to choose random direction
-	float3 wi = getCosHemisphereSample(rndSeed, norm);
-	float3 bounceColor = shootIndirectRay(hit, wi, gMinT, rndSeed, depth);
-
-	// Attenuate color by indirect color
-	return bounceColor * diffuseColor;
-}
-
-[shader("closesthit")]
-void IndirectClosestHit(inout IndirectRayPayload rayData, BuiltInTriangleIntersectionAttributes attribs)
-{
-	// Extract data from scene description 
-	ShadingData shadeData = getHitShadingData(attribs);
-
-	// Add emissive color
-	//rayData.color = gEmitMult * shadeData.emissive.rgb;
-
-	// Direct illumination
-	if (gDoDirectLighting)
-	{
-		rayData.color += lambertianDirect(rayData.randSeed, shadeData.posW, shadeData.N, shadeData.diffuse);
-	}
-
-	// Indirect illumination
-	if (rayData.rayDepth < gMaxDepth)
-	{
-		rayData.color += lambertianIndirect(rayData.randSeed, shadeData.posW, shadeData.N, shadeData.diffuse, rayData.rayDepth);
-	}
-}
-
 [shader("raygeneration")]
-void ShadeWithReservoirsRayGen()
+void SpatialReuseRayGen()
 {
 	// Get our pixel's position on the screen
 	uint2 pixelIndex = DispatchRaysIndex().xy;
@@ -173,49 +89,39 @@ void ShadeWithReservoirsRayGen()
 	float4 worldNorm = gNorm[pixelIndex];
 	float4 difMatlColor = gDiffuseMtl[pixelIndex];
 	float4 emissiveData = gEmissive[pixelIndex];
-	
+
 	float3 albedo = difMatlColor.rgb;
 
 	// Initialize random number generator
 	uint randSeed = initRand(pixelIndex.x + dim.x * pixelIndex.y, gFrameCount, 16);
 
-	// Set previous reservoir
-	float4 reservoir = gSpatialReservoirs[pixelIndex];
-	gPrevReservoirs[pixelIndex] = reservoir;
-
+	Reservoir spatial_reservoir = { 0, 0, 0, 0 };
 	float3 shadeColor = float3(0.f, 0.f, 0.f);
 	if (worldPos.w != 0)
 	{
+		// To hold information about current light
+		float dist;
+		float3 lightIntensity;
+		float3 lightDirection;
+
 		if (gEnableReSTIR)
 		{
-			// Do shading with light stored in reservoir
-			float dist;
-			float3 lightIntensity;
-			float3 lightDirection;
-
-			int lightSample = gSpatialReservoirs[pixelIndex].x;
-			getLightData(lightSample, worldPos.xyz, lightDirection, lightIntensity, dist);
-
-			// Lambertian dot product
-			float cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
-
-			// Shoot shadow ray
-			float shadow = shadowRayVisibility(worldPos.xyz, lightDirection, gMinT, dist);
-
-			// Compute Lambertian shading color (divide by probability of light = 1.0 / N)
-			shadeColor = shadow * cosTheta * lightIntensity * gSpatialReservoirs[pixelIndex].z;
-			shadeColor *= albedo / M_PI;
-			shadeColor /= dist * dist;
+			spatial_reservoir = createReservoir(gCurrReservoirs[pixelIndex]);
 		}
 		else
 		{
-			shadeColor = gSpatialReservoirs[pixelIndex].xyz;
+			shadeColor += lambertianDirect(randSeed, worldPos.xyz, worldNorm.xyz, difMatlColor.rgb);
 		}
 	}
-	else 
+	else
 	{
 		shadeColor = albedo;
 	}
-	
-	gOutput[pixelIndex] = float4(shadeColor, 1.f);
+
+	gSpatialReservoirs[pixelIndex] = float4(shadeColor, 1.f);
+
+	if (gEnableReSTIR)
+	{
+		gSpatialReservoirs[pixelIndex] = float4(spatial_reservoir.lightSample, spatial_reservoir.M, spatial_reservoir.weight, spatial_reservoir.totalWeight);
+	}
 }

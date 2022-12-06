@@ -37,6 +37,7 @@
     <ClCompile Include="Passes\SimpleGlobalIlluminationPass.cpp" />
     <ClCompile Include="Passes\SimpleToneMappingPass.cpp" />
     <ClCompile Include="Passes\SinusoidRasterPass.cpp" />
+    <ClCompile Include="Passes\SpatialReusePass.cpp" />
     <ClCompile Include="Passes\ThinLensGBufferPass.cpp" />
     <ClCompile Include="Pathtracer.cpp" />
   </ItemGroup>
@@ -67,6 +68,7 @@
     <ClInclude Include="Passes\SimpleGlobalIlluminationPass.h" />
     <ClInclude Include="Passes\SimpleToneMappingPass.h" />
     <ClInclude Include="Passes\SinusoidRasterPass.h" />
+    <ClInclude Include="Passes\SpatialReusePass.h" />
     <ClInclude Include="Passes\ThinLensGBufferPass.h" />
   </ItemGroup>
   <ItemGroup>
@@ -139,6 +141,10 @@
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">4.0</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">4.0</ShaderModel>
+    </FxCompile>
+    <FxCompile Include="Shaders\spatialReuse.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="Shaders\thinLensGBuffer.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>

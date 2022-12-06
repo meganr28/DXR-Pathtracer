@@ -83,6 +83,9 @@
     <ClCompile Include="Passes\ShadeWithReservoirsPass.cpp">
       <Filter>Passes</Filter>
     </ClCompile>
+    <ClCompile Include="Passes\SpatialReusePass.cpp">
+      <Filter>Passes</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Passes\ConstantColorPass.h">
@@ -166,6 +169,9 @@
     <ClInclude Include="Passes\ShadeWithReservoirsPass.h">
       <Filter>Passes</Filter>
     </ClInclude>
+    <ClInclude Include="Passes\SpatialReusePass.h">
+      <Filter>Passes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Passes">
@@ -225,6 +231,9 @@
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\shadeWithReservoirs.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\spatialReuse.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
   </ItemGroup>
