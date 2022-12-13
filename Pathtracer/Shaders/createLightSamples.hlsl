@@ -40,7 +40,7 @@ shared cbuffer GlobalCB
 
 	bool  gDoIndirectLighting;  // Should we shoot indirect rays?
 	bool  gDoDirectLighting; // Should we shoot shadow rays?
-	bool  gEnableReSTIR;
+	bool  gEnableWeightedRIS;
 	bool  gDoVisibilityReuse;
 	bool  gDoTemporalReuse;
 }
@@ -196,7 +196,7 @@ void CreateLightSamplesRayGen()
 		float3 lightIntensity;
 		float3 lightDirection;
 
-		if (gEnableReSTIR)
+		if (gEnableWeightedRIS)
 		{
 			float cosTheta = 0.f;
 			float p_hat = 0.f;
@@ -300,7 +300,7 @@ void CreateLightSamplesRayGen()
 
 	gCurrReservoirs[pixelIndex] = float4(shadeColor, 1.f);
 
-	if (gEnableReSTIR)
+	if (gEnableWeightedRIS)
 	{
 		gCurrReservoirs[pixelIndex] = float4(reservoir.lightSample, reservoir.M, reservoir.weight, reservoir.totalWeight);
 	}

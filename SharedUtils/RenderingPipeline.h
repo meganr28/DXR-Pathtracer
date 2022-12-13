@@ -63,6 +63,10 @@ public:
 	virtual bool onMouseEvent(SampleCallbacks* pSample, const MouseEvent& mouseEvent) override;
 	virtual void onGuiRender(SampleCallbacks* pSample, Gui* pGui) override;
 	virtual void onDroppedFile(SampleCallbacks* pSample, const std::string& filename) override {}
+
+	bool mDoWeightedRIS = true;
+	bool mDoTemporalReuse = true;
+	bool mDoSpatialReuse = true;
     
 protected:
 	/** When a new scene is loaded, this gets called to let any passes in this pipeline know there's a new scene.
@@ -158,6 +162,9 @@ private:
 	bool mPipeUsesEnvMap         = false;
 	bool mPipeNeedsDefaultScene  = false;
 	bool mPipeHasAnimation       = true;
+	bool mPipeUsesWeightedRIS    = true;
+	bool mPipeUsesTemporal       = true;
+	bool mPipeUsesSpatial        = true;
 
 	// Helpers to clarify code querying if a pass can be removed (or another can be added after it)
 	bool canRemovePass(uint32_t passNum);

@@ -355,6 +355,27 @@ void RenderingPipeline::onGuiRender(SampleCallbacks* pSample, Gui* pGui)
 	pGui->addText("");
 
 	// Enable an option to enable/disable binding of the camera to a path
+	if (mPipeUsesWeightedRIS && mpResourceManager)
+	{
+		pGui->addCheckBox("Weighted RIS", mDoWeightedRIS);
+		mpResourceManager->setWeightedRIS(mDoWeightedRIS);
+	}
+
+	if (mPipeUsesTemporal)
+	{
+		pGui->addCheckBox("Temporal Reuse", mDoTemporalReuse);
+		mpResourceManager->setTemporal(mDoTemporalReuse);
+	}
+
+	if (mPipeUsesSpatial)
+	{
+		pGui->addCheckBox("Spatial Reuse", mDoSpatialReuse);
+		mpResourceManager->setSpatial(mDoSpatialReuse);
+	}
+
+	pGui->addText("");
+
+	// Enable an option to enable/disable binding of the camera to a path
 	if (mpScene && mpScene->getPathCount() && mPipeHasAnimation)
 	{
 		if (pGui->addCheckBox("Animated camera path?", mUseSceneCameraPath))

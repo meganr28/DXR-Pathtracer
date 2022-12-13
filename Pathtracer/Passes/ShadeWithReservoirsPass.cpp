@@ -15,8 +15,10 @@ namespace {
 	const char* kEntryIndirectClosestHit = "IndirectClosestHit";
 };
 
-ShadeWithReservoirsPass::ShadeWithReservoirsPass(const std::string& outBuf)
-	: mOutChannel(outBuf), ::RenderPass("Shade With Reservoirs Pass", "Shade With Reservoirs Options")
+ShadeWithReservoirsPass::ShadeWithReservoirsPass(const std::string& outBuf, const RenderParams& params) : 
+	mOutChannel(outBuf), 
+	mEnableReSTIR(params.mEnableReSTIR),
+	::RenderPass("Shade With Reservoirs Pass", "Shade With Reservoirs Options")
 {
 }
 
@@ -87,7 +89,7 @@ void ShadeWithReservoirsPass::execute(RenderContext* pRenderContext)
 	globalVars["GlobalCB"]["gFrameCount"] = mFrameCount++;
 	globalVars["GlobalCB"]["gDoIndirectLighting"] = mDoIndirectLighting;
 	globalVars["GlobalCB"]["gDoDirectLighting"] = mDoDirectLighting;
-	globalVars["GlobalCB"]["gEnableReSTIR"] = mEnableReSTIR;
+	globalVars["GlobalCB"]["gEnableReSTIR"] = mpResManager->getWeightedRIS();
 	globalVars["GlobalCB"]["gMaxDepth"] = mRayDepth;
 	globalVars["GlobalCB"]["gEmitMult"] = 1.0f;
 	

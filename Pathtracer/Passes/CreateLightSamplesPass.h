@@ -9,11 +9,11 @@ public:
 	using SharedPtr = std::shared_ptr<CreateLightSamplesPass>;
 	using SharedConstPtr = std::shared_ptr<const CreateLightSamplesPass>;
 
-	static SharedPtr create(const std::string &outBuf) { return SharedPtr(new CreateLightSamplesPass(outBuf)); }
+	static SharedPtr create(const std::string &outBuf, const RenderParams &params) { return SharedPtr(new CreateLightSamplesPass(outBuf, params)); }
 	virtual ~CreateLightSamplesPass() = default;
 
 protected:
-	CreateLightSamplesPass(const std::string& outBuf);
+	CreateLightSamplesPass(const std::string& outBuf, const RenderParams& params);
 
 	// RenderPass functionality
 	bool initialize(RenderContext* pRenderContext, ResourceManager::SharedPtr pResManager) override;

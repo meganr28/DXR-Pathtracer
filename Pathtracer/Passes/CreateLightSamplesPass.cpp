@@ -15,8 +15,11 @@ namespace {
 	const char* kEntryIndirectClosestHit = "IndirectClosestHit";
 };
 
-CreateLightSamplesPass::CreateLightSamplesPass(const std::string& outBuf)
-	: mOutChannel(outBuf), ::RenderPass("Create Light Samples Pass", "Create Light Samples Options")
+CreateLightSamplesPass::CreateLightSamplesPass(const std::string& outBuf, const RenderParams& params) : 
+	mOutChannel(outBuf), 
+	mEnableReSTIR(params.mEnableReSTIR), 
+	mDoTemporalReuse(params.mTemporalReuse),
+	::RenderPass("Create Light Samples Pass", "Create Light Samples Options")
 {
 }
 
@@ -117,9 +120,9 @@ void CreateLightSamplesPass::execute(RenderContext* pRenderContext)
 
 	globalVars["GlobalCB"]["gDoIndirectLighting"] = mDoIndirectLighting;
 	globalVars["GlobalCB"]["gDoDirectLighting"] = mDoDirectLighting;
-	globalVars["GlobalCB"]["gEnableReSTIR"] = mEnableReSTIR;
+	globalVars["GlobalCB"]["gEnableWeightedRIS"] = mpResManager->getWeightedRIS();
 	globalVars["GlobalCB"]["gDoVisiblityReuse"] = mDoVisibilityReuse;
-	globalVars["GlobalCB"]["gDoTemporalReuse"] = mDoTemporalReuse;
+	globalVars["GlobalCB"]["gDoTemporalReuse"] = mpResManager->getTemporal();
 	
 	// Pass G-Buffer textures to shader
 	globalVars["gPos"]        = mpResManager->getTexture("WorldPosition");

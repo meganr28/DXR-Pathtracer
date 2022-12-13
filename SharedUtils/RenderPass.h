@@ -20,6 +20,13 @@
 #include "Falcor.h"
 #include "ResourceManager.h"
 
+struct RenderParams
+{
+    bool mEnableReSTIR;
+    bool mTemporalReuse;
+    bool mSpatialReuse;
+};
+
 /** Abstract base class for render passes.
 */
 class RenderPass : public std::enable_shared_from_this<::RenderPass>

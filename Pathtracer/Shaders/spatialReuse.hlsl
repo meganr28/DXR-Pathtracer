@@ -22,7 +22,8 @@
 #include "shadowRay.hlsli"
 
 #define PI                 3.14159265f
-#define SPATIAL_NEIGHBORS  5
+#define SPATIAL_NEIGHBORS  20
+#define SPATIAL_RADIUS     5
 
 // Include and import common Falcor utilities and data structures
 import Raytracing;                   // Shared ray tracing specific functions & data
@@ -38,6 +39,7 @@ shared cbuffer GlobalCB
 	float gEmitMult;      // Multiply emissive channel by this channel
 
 	bool  gEnableReSTIR;  
+	bool  gDoSpatialReuse;
 }
 
 // Input and output textures
@@ -95,7 +97,9 @@ void SpatialReuseRayGen()
 	// Initialize random number generator
 	uint randSeed = initRand(pixelIndex.x + dim.x * pixelIndex.y, gFrameCount, 16);
 
-	Reservoir spatial_reservoir = { 0, 0, 0, 0 };
+	Reservoir reservoir = createReservoir(gCurrReservoirs[pixelIndex]);
+	Reservoir spatialReservoir = { 0, 0, 0, 0 };
+
 	float3 shadeColor = float3(0.f, 0.f, 0.f);
 	if (worldPos.w != 0)
 	{
@@ -104,9 +108,73 @@ void SpatialReuseRayGen()
 		float3 lightIntensity;
 		float3 lightDirection;
 
-		if (gEnableReSTIR)
+		if (gEnableReSTIR && gDoSpatialReuse)
 		{
-			spatial_reservoir = createReservoir(gCurrReservoirs[pixelIndex]);
+			// Combine current reservoir
+			getLightData(reservoir.lightSample, worldPos.xyz, lightDirection, lightIntensity, dist);
+			float cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
+			float p_hat = length((difMatlColor.rgb / M_PI) * lightIntensity * cosTheta / (dist * dist));
+			updateReservoir(spatialReservoir, p_hat * reservoir.weight * reservoir.M, reservoir.lightSample, randSeed);
+
+			float lightCount = reservoir.M;
+			for (int i = 0; i < SPATIAL_NEIGHBORS; ++i)
+			{
+				float radius = SPATIAL_RADIUS * nextRand(randSeed);
+				float angle = 2.0f * M_PI * nextRand(randSeed);
+
+				// Calculate neighbor pixel
+				float2 neighborIndex = pixelIndex;
+				//uint2 neighborOffset = uint2(0, 0);
+
+				neighborIndex.x += radius * cos(angle);
+				neighborIndex.y += radius * sin(angle);
+
+				// Calculate neighbor offset -> [0, 1] -> [0, 2 * NEIGHBOR_RADIUS] -> [-NEIGHBOR_RADIUS, NEIGHBOR_RADIUS]
+				//neighborOffset.x = int(nextRand(randSeed) * 2 * SPATIAL_RADIUS) - SPATIAL_RADIUS;
+				//neighborOffset.y = int(nextRand(randSeed) * 2 * SPATIAL_RADIUS) - SPATIAL_RADIUS;
+				//neighborIndex += neighborOffset;
+
+				// Clamp index
+				//neighborIndex.x = max(0, min(neighborIndex.x + neighborOffset.x, dim.x - 1));
+				//neighborIndex.y = max(0, min(neighborIndex.y + neighborOffset.y, dim.y - 1));
+				uint2 u_neighborIndex = uint2(neighborIndex);
+				u_neighborIndex.x = max(0, min(u_neighborIndex.x, dim.x - 1));
+				u_neighborIndex.y = max(0, min(u_neighborIndex.y, dim.y - 1));
+				Reservoir neighborReservoir = createReservoir(gCurrReservoirs[u_neighborIndex]);
+
+				float4 neighborNorm = gNorm[u_neighborIndex];
+
+				// Check that the angle between the normals are within 25 degrees
+				if ((dot(worldNorm.xyz, neighborNorm.xyz)) < 0.906) continue;
+
+				// Check if neighbor exceeds 10% of current pixel's depth
+				if (neighborNorm.w > 1.1f * worldNorm.w || neighborNorm.w < 0.9f * worldNorm.w) continue;
+
+				// Combine neighbor's reservoir
+				getLightData(neighborReservoir.lightSample, worldPos.xyz, lightDirection, lightIntensity, dist);
+				cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
+				p_hat = length((difMatlColor.rgb / M_PI) * lightIntensity * cosTheta / (dist * dist));
+				updateReservoir(spatialReservoir, p_hat * neighborReservoir.weight * neighborReservoir.M, neighborReservoir.lightSample, randSeed);
+			
+				lightCount += neighborReservoir.M;
+			}
+
+			// Update M
+			spatialReservoir.M = lightCount;
+
+			// Update weight
+			getLightData(spatialReservoir.lightSample, worldPos.xyz, lightDirection, lightIntensity, dist);
+			cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
+			p_hat = length((difMatlColor.rgb / M_PI) * lightIntensity * cosTheta / (dist * dist));
+
+			if (p_hat == 0.f) {
+				spatialReservoir.weight = 0.f;
+			}
+			else {
+				spatialReservoir.weight = (1.f / max(p_hat, 0.0001f)) * (spatialReservoir.totalWeight / max(spatialReservoir.M, 0.0001f));
+			}
+
+			//spatialReservoir = createReservoir(gCurrReservoirs[pixelIndex]);
 		}
 		else
 		{
@@ -122,6 +190,13 @@ void SpatialReuseRayGen()
 
 	if (gEnableReSTIR)
 	{
-		gSpatialReservoirs[pixelIndex] = float4(spatial_reservoir.lightSample, spatial_reservoir.M, spatial_reservoir.weight, spatial_reservoir.totalWeight);
+		if (gDoSpatialReuse)
+		{
+			gSpatialReservoirs[pixelIndex] = float4(spatialReservoir.lightSample, spatialReservoir.M, spatialReservoir.weight, spatialReservoir.totalWeight);
+		}
+		else
+		{
+			gSpatialReservoirs[pixelIndex] = gCurrReservoirs[pixelIndex];
+		}
 	}
 }

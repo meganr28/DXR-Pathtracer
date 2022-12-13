@@ -9,11 +9,11 @@ public:
 	using SharedPtr = std::shared_ptr<SpatialReusePass>;
 	using SharedConstPtr = std::shared_ptr<const SpatialReusePass>;
 
-	static SharedPtr create(const std::string &outBuf) { return SharedPtr(new SpatialReusePass(outBuf)); }
+	static SharedPtr create(const std::string &outBuf, const RenderParams& params) { return SharedPtr(new SpatialReusePass(outBuf, params)); }
 	virtual ~SpatialReusePass() = default;
 
 protected:
-	SpatialReusePass(const std::string& outBuf);
+	SpatialReusePass(const std::string& outBuf, const RenderParams& params);
 
 	// RenderPass functionality
 	bool initialize(RenderContext* pRenderContext, ResourceManager::SharedPtr pResManager) override;
@@ -35,6 +35,7 @@ protected:
 
 	// User controls to switch on/off certain ray types
 	bool                          mEnableReSTIR = true;
+	bool                          mDoSpatialReuse = true;
 		
 	int32_t                       mRayDepth = 1;       ///< Current max. ray depth
 	const int32_t                 mMaxRayDepth = 8;    ///< Max supported ray depth

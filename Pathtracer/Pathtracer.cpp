@@ -33,13 +33,18 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	// Create our rendering pipeline
 	RenderingPipeline *pipeline = new RenderingPipeline();
 
+	RenderParams params;
+	params.mEnableReSTIR = pipeline->mDoWeightedRIS;
+	params.mTemporalReuse = pipeline->mDoTemporalReuse;
+	params.mSpatialReuse = pipeline->mDoSpatialReuse;
+
 	// Add passes into our pipeline
 	pipeline->setPass(0, LightProbeGBufferPass::create()); // TODO: change to ray traced g-buffer pass
 	//pipeline->setPass(1, BuildCellReservoirsPass::create("HDRColorOutput")); // build grid reservoirs and temporal reuse
 	//pipeline->setPass(2, SampleLightGridPass::create("HDRColorOutput")); // use grid to perform shading
-	pipeline->setPass(1, CreateLightSamplesPass::create("HDRColorOutput")); // collect light samples and temporal reuse
-	pipeline->setPass(2, SpatialReusePass::create("HDRColorOutput")); // spatial reuse
-	pipeline->setPass(3, ShadeWithReservoirsPass::create("HDRColorOutput")); // use reservoirs to perform shading
+	pipeline->setPass(1, CreateLightSamplesPass::create("HDRColorOutput", params)); // collect light samples and temporal reuse
+	pipeline->setPass(2, SpatialReusePass::create("HDRColorOutput", params)); // spatial reuse
+	pipeline->setPass(3, ShadeWithReservoirsPass::create("HDRColorOutput", params)); // use reservoirs to perform shading
 	pipeline->setPass(4, SimpleToneMappingPass::create("HDRColorOutput", ResourceManager::kOutputChannel));
 
 	// Define a set of config / window parameters for our program

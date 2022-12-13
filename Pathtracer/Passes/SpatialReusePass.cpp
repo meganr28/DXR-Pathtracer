@@ -11,8 +11,10 @@ namespace {
 	const char* kEntryShadowClosestHit = "ShadowClosestHit";
 };
 
-SpatialReusePass::SpatialReusePass(const std::string& outBuf)
-	: mOutChannel(outBuf), ::RenderPass("Spatial Reuse Pass", "Spatial Reuse Options")
+SpatialReusePass::SpatialReusePass(const std::string& outBuf, const RenderParams& params) : 
+	mOutChannel(outBuf), 
+	mEnableReSTIR(params.mEnableReSTIR),
+	::RenderPass("Spatial Reuse Pass", "Spatial Reuse Options")
 {
 }
 
@@ -79,7 +81,8 @@ void SpatialReusePass::execute(RenderContext* pRenderContext)
 	globalVars["GlobalCB"]["gFrameCount"] = mFrameCount++;
 	globalVars["GlobalCB"]["gMaxDepth"] = mRayDepth;
 	globalVars["GlobalCB"]["gEmitMult"] = 1.0f;
-	globalVars["GlobalCB"]["gEnableReSTIR"] = mEnableReSTIR;
+	globalVars["GlobalCB"]["gEnableReSTIR"] = mpResManager->getWeightedRIS();
+	globalVars["GlobalCB"]["gDoSpatialReuse"] = mpResManager->getSpatial();
 	
 	// Pass G-Buffer textures to shader
 	globalVars["gPos"]        = mpResManager->getTexture("WorldPosition");

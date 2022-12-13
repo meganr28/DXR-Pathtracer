@@ -139,6 +139,15 @@ public:
 	float getMinTDist() const        { return mMinT; }
 	void  setMinTDist(float newMinT) { mMinT = newMinT; }
 
+	bool  getWeightedRIS() const     { return mEnableWeightedRIS; }
+	void  setWeightedRIS(bool val)   { mEnableWeightedRIS = val; }
+
+	bool  getTemporal() const        { return mEnableTemporal; }
+	void  setTemporal(bool val)      { mEnableTemporal = val; }
+
+	bool  getSpatial() const         { return mEnableSpatial; }
+	void  setSpatial(bool val)       { mEnableSpatial = val; }
+
 protected:
 	ResourceManager(uint32_t width, uint32_t height, SampleCallbacks *callbacks) : mWidth(width), mHeight(height), mpAppCallbacks(callbacks) {}
 
@@ -147,6 +156,9 @@ protected:
     uint32_t mHeight = 0;       
 	bool     mIsInitialized = false;
 	bool     mUpdatedFlag = true;
+	bool     mEnableWeightedRIS = true;
+	bool     mEnableTemporal = true;
+	bool     mEnableSpatial = true;
 	float    mMinT = 1.0e-4f;
 
 	// If using the resource manager to manage an environment map, its filename is here.

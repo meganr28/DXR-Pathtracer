@@ -9,11 +9,11 @@ public:
 	using SharedPtr = std::shared_ptr<ShadeWithReservoirsPass>;
 	using SharedConstPtr = std::shared_ptr<const ShadeWithReservoirsPass>;
 
-	static SharedPtr create(const std::string &outBuf) { return SharedPtr(new ShadeWithReservoirsPass(outBuf)); }
+	static SharedPtr create(const std::string &outBuf, const RenderParams& params) { return SharedPtr(new ShadeWithReservoirsPass(outBuf, params)); }
 	virtual ~ShadeWithReservoirsPass() = default;
 
 protected:
-	ShadeWithReservoirsPass(const std::string& outBuf);
+	ShadeWithReservoirsPass(const std::string& outBuf, const RenderParams& params);
 
 	// RenderPass functionality
 	bool initialize(RenderContext* pRenderContext, ResourceManager::SharedPtr pResManager) override;
