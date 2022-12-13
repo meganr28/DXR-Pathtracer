@@ -206,12 +206,12 @@ void CreateLightSamplesRayGen()
 
 			if (gFrameCount > 0)
 			{
-				float4 prevScreenPos = mul(float4(worldPos.xyz, 1.0), gLastCameraMatrix);
-				prevScreenPos / prevScreenPos.w;
+				float4 prevScreenPos = mul(worldPos, gLastCameraMatrix);
+				prevScreenPos /= prevScreenPos.w;
 
 				uint2 prevIndex = pixelIndex;
-				//prevIndex.x = ((prevScreenPos.x + 1.f) * 0.5f) * (float)dim.x;
-				//prevIndex.y = ((1.f - prevScreenPos.y) * 0.5f) * (float)dim.y;
+				prevIndex.x = ((prevScreenPos.x + 1.f) * 0.5f) * (float)dim.x;
+				prevIndex.y = ((1.f - prevScreenPos.y) * 0.5f) * (float)dim.y;
 
 				if (prevIndex.x >= 0 && prevIndex.x < dim.x && prevIndex.y >= 0 && prevIndex.y < dim.y) {
 					prev_reservoir = createReservoir(gPrevReservoirs[prevIndex]);

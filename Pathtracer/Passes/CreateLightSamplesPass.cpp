@@ -104,11 +104,6 @@ void CreateLightSamplesPass::execute(RenderContext* pRenderContext)
 	// Check that pass is ready to render
 	if (!outTex || !mpRays || !mpRays->readyToRender()) return;
 
-	if (hasCameraMoved())
-	{
-		mpLastCameraMatrix = mpScene->getActiveCamera()->getViewProjMatrix();
-	}
-
 	// Pass background color to miss shader #0
 	auto globalVars = mpRays->getGlobalVars();
 	globalVars["GlobalCB"]["gMinT"] = mpResManager->getMinTDist();
@@ -117,6 +112,7 @@ void CreateLightSamplesPass::execute(RenderContext* pRenderContext)
 	globalVars["GlobalCB"]["gLightSamples"] = mLightSamples;
 	globalVars["GlobalCB"]["gEmitMult"] = 1.0f;
 	globalVars["GlobalCB"]["gLastCameraMatrix"] = mpLastCameraMatrix;
+	if (hasCameraMoved()) mpLastCameraMatrix = mpScene->getActiveCamera()->getViewProjMatrix();
 
 	globalVars["GlobalCB"]["gDoIndirectLighting"] = mDoIndirectLighting;
 	globalVars["GlobalCB"]["gDoDirectLighting"] = mDoDirectLighting;
