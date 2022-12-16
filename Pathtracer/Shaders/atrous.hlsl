@@ -51,6 +51,24 @@ shared RWTexture2D<float4> gDenoisedImage;         // Output to store shaded res
 // Environment map
 shared Texture2D<float4>   gEnvMap;
 
+static const int2 offsets[25] = { int2(-2, -2), int2(-2, -1), int2(-2, 0), int2(-2, 1), int2(-2, 2),
+								  int2(-1, -2), int2(-1, -1), int2(-1, 0), int2(-1, 1), int2(-1, 2),
+								  int2(0, -2), int2(0, -1), int2(0, 0), int2(0, 1), int2(0, 2),
+								  int2(1, -2), int2(1, -1), int2(1, 0), int2(1, 1), int2(1, 2),
+								  int2(2, -2), int2(2, -1), int2(2, 0), int2(2, 1), int2(2, 2) };
+
+//static const int offsets_y[25] = { -2, -1, 0, 1, 2,
+//					 -2, -1, 0, 1, 2,
+//					 -2, -1, 0, 1, 2,
+//					 -2, -1, 0, 1, 2,
+//					 -2, -1, 0, 1, 2 };
+
+static const float kernel[25] = { 1.f / 256.f, 1.f / 64.f, 3.f / 128.f, 1.f / 64.f, 1.f / 256.f,
+								  1.f / 64.f, 1.f / 16.f, 3.f / 32.f, 1.f / 16.f, 1 / 64.f,
+								  3.f / 128.f, 3.f / 32.f, 9.f / 64.f, 3.f / 32.f, 3.f / 128.f,
+								  1.f / 64.f, 1.f / 16.f, 3.f / 32.f, 1.f / 16.f, 1 / 64.f,
+								  1.f / 256.f, 1.f / 64.f, 3.f / 128.f, 1.f / 64.f, 1.f / 256.f };
+
 [shader("raygeneration")]
 void DenoisingRayGen()
 {
@@ -61,15 +79,26 @@ void DenoisingRayGen()
 	// Read G-buffer data
 	float4 worldPos = gPos[pixelIndex];
 	float4 worldNorm = gNorm[pixelIndex];
-	float4 difMatlColor = gDiffuseMtl[pixelIndex];
-	float4 emissiveData = gEmissive[pixelIndex];
 
-	float3 albedo = difMatlColor.rgb;
+	// Edge weights
+	int stepsize = 1;
 
 	// Initialize random number generator
 	uint randSeed = initRand(pixelIndex.x + dim.x * pixelIndex.y, gFrameCount, 16);
 
-	float3 shadeColor = float3(1.f, 0.f, 0.f);
+	float3 sum = float3(0.f, 0.f, 0.f);
+	for (int i = 0; i < 25; i++) {
+		int2 offset = offsets[i] * stepsize;
+		uint2 uv = pixelIndex + offset;
 
-	gOutput[pixelIndex] = gShadedOutput[pixelIndex];
+		// Clamp indices to image width and height
+		uv.x = clamp(uv.x, 0, dim.x - 1);
+		uv.y = clamp(uv.y, 0, dim.y - 1);
+
+		// Apply kernel
+		float3 col = gShadedOutput[uv].xyz;
+		sum += col * kernel[i];
+	}
+
+	gOutput[pixelIndex] = float4(sum, 1.f);
 }
