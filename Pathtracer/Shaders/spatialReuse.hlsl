@@ -37,6 +37,8 @@ shared cbuffer GlobalCB
 	uint  gFrameCount;    // Frame counter to act as random seed 
 	uint  gMaxDepth;      // Max recursion depth
 	float gEmitMult;      // Multiply emissive channel by this channel
+	uint  gSpatialNeighbors;
+	uint  gSpatialRadius;
 
 	bool  gEnableReSTIR;  
 	bool  gDoSpatialReuse;
@@ -117,9 +119,9 @@ void SpatialReuseRayGen()
 			updateReservoir(spatialReservoir, p_hat * reservoir.weight * reservoir.M, reservoir.lightSample, randSeed);
 
 			float lightCount = reservoir.M;
-			for (int i = 0; i < SPATIAL_NEIGHBORS; ++i)
+			for (int i = 0; i < gSpatialNeighbors; ++i)
 			{
-				float radius = SPATIAL_RADIUS * nextRand(randSeed);
+				float radius = gSpatialRadius * nextRand(randSeed);
 				float angle = 2.0f * M_PI * nextRand(randSeed);
 
 				// Calculate neighbor pixel
@@ -175,6 +177,12 @@ void SpatialReuseRayGen()
 			}
 
 			//spatialReservoir = createReservoir(gCurrReservoirs[pixelIndex]);
+
+			// Evaluate visibility for initial candidates
+			float shadowed = shadowRayVisibility(worldPos.xyz, lightDirection, gMinT, dist);
+			if (shadowed <= 0.001f) {
+				spatialReservoir.weight = 0.f;
+			}
 		}
 		else
 		{

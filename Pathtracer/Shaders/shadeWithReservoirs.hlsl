@@ -42,6 +42,8 @@ shared Texture2D<float4>   gPos;           // G-buffer world-space position
 shared Texture2D<float4>   gNorm;          // G-buffer world-space normal
 shared Texture2D<float4>   gDiffuseMtl;    // G-buffer diffuse material
 shared Texture2D<float4>   gEmissive;
+shared Texture2D<float4>   gSpatialReservoirsIn;
+shared Texture2D<float4>   gSpatialReservoirsOut;
 shared Texture2D<float4>   gSpatialReservoirs;
 shared RWTexture2D<float4> gPrevReservoirs;
 shared RWTexture2D<float4> gOutput;        // Output to store shaded result

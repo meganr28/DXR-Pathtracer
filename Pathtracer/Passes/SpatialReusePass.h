@@ -38,6 +38,8 @@ protected:
 	bool                          mDoSpatialReuse = true;
 		
 	int32_t                       mRayDepth = 1;       ///< Current max. ray depth
+	int32_t						  mSpatialNeighbors = 20;
+	int32_t						  mSpatialRadius = 5;
 	const int32_t                 mMaxRayDepth = 8;    ///< Max supported ray depth
 	
 	// Counter to initialize thin lens random numbers each frame

@@ -24,7 +24,8 @@ bool SpatialReusePass::initialize(RenderContext* pRenderContext, ResourceManager
 	mpResManager = pResManager;
 
 	// Request texture resources for this pass (Note: We do not need a z-buffer since ray tracing does not generate one by default)
-	mpResManager->requestTextureResources({ "WorldPosition", "WorldNormal", "MaterialDiffuse", "CurrReservoirs", "SpatialReservoirs"});
+	mpResManager->requestTextureResources({ "WorldPosition", "WorldNormal", "MaterialDiffuse", "CurrReservoirs"
+		, "SpatialReservoirsIn", "SpatialReservoirsOut", "SpatialReservoirs"});
 	mpResManager->requestTextureResource(mOutChannel);
 	mpResManager->requestTextureResource(ResourceManager::kEnvironmentMap);
 
@@ -63,7 +64,8 @@ void SpatialReusePass::renderGui(Gui* pGui)
 {
 	int dirty = 0;
 	// Enable/disable different passes
-	dirty |= (int)pGui->addCheckBox(mEnableReSTIR ? "Show Direct Lighting" : "Show ReSTIR", mEnableReSTIR);
+	dirty |= (int)pGui->addIntVar("Spatial Neighbors", mSpatialNeighbors, 0, 100);
+	dirty |= (int)pGui->addIntVar("Spatial Radius", mSpatialRadius, 0, 100);
 	if (dirty) setRefreshFlag();
 }
 
@@ -81,6 +83,8 @@ void SpatialReusePass::execute(RenderContext* pRenderContext)
 	globalVars["GlobalCB"]["gFrameCount"] = mFrameCount++;
 	globalVars["GlobalCB"]["gMaxDepth"] = mRayDepth;
 	globalVars["GlobalCB"]["gEmitMult"] = 1.0f;
+	globalVars["GlobalCB"]["gSpatialNeighbors"] = mSpatialNeighbors;
+	globalVars["GlobalCB"]["gSpatialRadius"] = mSpatialRadius;
 	globalVars["GlobalCB"]["gEnableReSTIR"] = mpResManager->getWeightedRIS();
 	globalVars["GlobalCB"]["gDoSpatialReuse"] = mpResManager->getSpatial();
 	
@@ -92,7 +96,9 @@ void SpatialReusePass::execute(RenderContext* pRenderContext)
 
 	// Pass ReGIR grid structure for updating
 	globalVars["gCurrReservoirs"]  = mpResManager->getTexture("CurrReservoirs");
-	globalVars["gSpatialReservoirs"]  = mpResManager->getTexture("SpatialReservoirs");
+	globalVars["gSpatialReservoirsIn"]  = mpResManager->getTexture("SpatialReservoirsIn");
+	globalVars["gSpatialReservoirsOut"] = mpResManager->getTexture("SpatialReservoirsOut");
+	globalVars["gSpatialReservoirs"]    = mpResManager->getTexture("SpatialReservoirs");
 
 	//globalVars["gOutput"]     = outTex;
 
