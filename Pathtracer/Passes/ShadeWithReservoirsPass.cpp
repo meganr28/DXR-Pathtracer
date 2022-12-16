@@ -28,7 +28,7 @@ bool ShadeWithReservoirsPass::initialize(RenderContext* pRenderContext, Resource
 	mpResManager = pResManager;
 
 	// Request texture resources for this pass (Note: We do not need a z-buffer since ray tracing does not generate one by default)
-	mpResManager->requestTextureResources({ "WorldPosition", "WorldNormal", "MaterialDiffuse", "CurrReservoirs", "PrevReservoirs"});
+	mpResManager->requestTextureResources({ "WorldPosition", "WorldNormal", "MaterialDiffuse", "CurrReservoirs", "PrevReservoirs", "ShadedOutput"});
 	mpResManager->requestTextureResource(mOutChannel);
 	mpResManager->requestTextureResource(ResourceManager::kEnvironmentMap);
 
@@ -102,8 +102,9 @@ void ShadeWithReservoirsPass::execute(RenderContext* pRenderContext)
 	// Pass ReGIR grid structure for updating
 	globalVars["gSpatialReservoirs"]  = mpResManager->getTexture("SpatialReservoirs");
 	globalVars["gPrevReservoirs"]	  = mpResManager->getTexture("PrevReservoirs");
+	globalVars["gShadedOutput"] = mpResManager->getTexture("ShadedOutput");
 
-	globalVars["gOutput"]     = outTex;
+	//globalVars["gOutput"]     = outTex;
 
 	// Set environment map texture for indirect illumination
 	globalVars["gEnvMap"] = mpResManager->getTexture(ResourceManager::kEnvironmentMap);

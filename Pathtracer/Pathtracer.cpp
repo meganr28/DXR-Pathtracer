@@ -53,8 +53,8 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	for (int i = 0; i < spatialPasses; i++) {
 		pipeline->setPass(3 + i, ShadeWithReservoirsPass::create("HDRColorOutput", params)); // use reservoirs to perform shading
 	}
-	//pipeline->setPass(3 + spatialPasses, DenoisingPass::create("HDRColorOutput"));
-	pipeline->setPass(3 + spatialPasses, SimpleToneMappingPass::create("HDRColorOutput", ResourceManager::kOutputChannel));
+	pipeline->setPass(3 + spatialPasses, DenoisingPass::create("HDRColorOutput"));
+	pipeline->setPass(3 + spatialPasses + 1, SimpleToneMappingPass::create("HDRColorOutput", ResourceManager::kOutputChannel));
 
 	// Define a set of config / window parameters for our program
     SampleConfig config;

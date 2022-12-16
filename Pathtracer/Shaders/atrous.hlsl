@@ -42,6 +42,7 @@ shared Texture2D<float4>   gPos;           // G-buffer world-space position
 shared Texture2D<float4>   gNorm;          // G-buffer world-space normal
 shared Texture2D<float4>   gDiffuseMtl;    // G-buffer diffuse material
 shared Texture2D<float4>   gEmissive;
+shared RWTexture2D<float4> gShadedOutput;
 shared RWTexture2D<float4> gOutput;                // Output to store shaded result
 shared RWTexture2D<float4> gDenoiseIn;             // Output to store shaded result
 shared RWTexture2D<float4> gDenoiseOut;            // Output to store shaded result
@@ -70,5 +71,5 @@ void DenoisingRayGen()
 
 	float3 shadeColor = float3(1.f, 0.f, 0.f);
 
-	gDenoisedImage[pixelIndex] = float4(shadeColor, 1.f);
+	gOutput[pixelIndex] = gShadedOutput[pixelIndex];
 }

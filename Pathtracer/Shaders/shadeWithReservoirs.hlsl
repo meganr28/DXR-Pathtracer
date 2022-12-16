@@ -46,7 +46,7 @@ shared Texture2D<float4>   gSpatialReservoirsIn;
 shared Texture2D<float4>   gSpatialReservoirsOut;
 shared Texture2D<float4>   gSpatialReservoirs;
 shared RWTexture2D<float4> gPrevReservoirs;
-shared RWTexture2D<float4> gOutput;        // Output to store shaded result
+shared RWTexture2D<float4> gShadedOutput;        // Output to store shaded result
 
 // Environment map
 shared Texture2D<float4>   gEnvMap;
@@ -219,5 +219,5 @@ void ShadeWithReservoirsRayGen()
 		shadeColor = albedo;
 	}
 	
-	gOutput[pixelIndex] = float4(shadeColor, 1.f);
+	gShadedOutput[pixelIndex] = float4(shadeColor, 1.f);
 }

@@ -37,7 +37,7 @@ bool DenoisingPass::initialize(RenderContext* pRenderContext, ResourceManager::S
 	mpResManager = pResManager;
 
 	// Request texture resources for this pass (Note: We do not need a z-buffer since ray tracing does not generate one by default)
-	mpResManager->requestTextureResources({ "WorldPosition", "WorldNormal", "MaterialDiffuse",
+	mpResManager->requestTextureResources({ "WorldPosition", "WorldNormal", "MaterialDiffuse", "ShadedOutput"
 										    "CurrReservoirs", "DenoiseIn", "DenoiseOut", "DenoisedImage"});
 
 	// Set the default scene
@@ -94,12 +94,12 @@ void DenoisingPass::execute(RenderContext* pRenderContext)
 	globalVars["gEmissive"] = mpResManager->getTexture("Emissive");
 
 	// Pass ReGIR grid structure for updating
-	globalVars["gOutput"] = mpResManager->getTexture("CurrReservoirs");
+	globalVars["gShadedOutput"] = mpResManager->getTexture("ShadedOutput");
 	globalVars["gDenoiseIn"] = mpResManager->getTexture("DenoiseIn");
 	globalVars["gDenoiseOut"] = mpResManager->getTexture("DenoiseOut");
 	globalVars["gDenoisedImage"] = mpResManager->getTexture("DenoisedImage");
 
-	//globalVars["gOutput"]     = outTex;
+	globalVars["gOutput"]     = outTex;
 
 	// Set environment map texture for indirect illumination
 	globalVars["gEnvMap"] = mpResManager->getTexture(ResourceManager::kEnvironmentMap);
