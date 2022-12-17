@@ -90,7 +90,7 @@ void DenoisingPass::execute(RenderContext* pRenderContext)
 	// Pass background color to miss shader #0
 	auto globalVars = mpRays->getGlobalVars();
 	globalVars["GlobalCB"]["gFrameCount"] = mFrameCount++;
-	globalVars["GlobalCB"]["gEnableDenoise"] = mDoDenoise; // TODO: add variable for this
+	globalVars["GlobalCB"]["gEnableDenoise"] = mpResManager->getDenoising();
 	globalVars["GlobalCB"]["gFilterSize"] = mFilterSize; 
 	globalVars["GlobalCB"]["gColorPhi"] = mColorPhi;
 	globalVars["GlobalCB"]["gNormalPhi"] = mNormalPhi;

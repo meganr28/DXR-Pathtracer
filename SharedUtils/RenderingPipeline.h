@@ -67,6 +67,7 @@ public:
 	bool mDoWeightedRIS = true;
 	bool mDoTemporalReuse = true;
 	bool mDoSpatialReuse = true;
+	bool mDoDenoising = true;
     
 protected:
 	/** When a new scene is loaded, this gets called to let any passes in this pipeline know there's a new scene.
@@ -165,6 +166,7 @@ private:
 	bool mPipeUsesWeightedRIS    = true;
 	bool mPipeUsesTemporal       = true;
 	bool mPipeUsesSpatial        = true;
+	bool mPipeUsesDenoising		 = true;
 
 	// Helpers to clarify code querying if a pass can be removed (or another can be added after it)
 	bool canRemovePass(uint32_t passNum);

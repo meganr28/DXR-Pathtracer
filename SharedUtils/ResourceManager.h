@@ -148,6 +148,9 @@ public:
 	bool  getSpatial() const         { return mEnableSpatial; }
 	void  setSpatial(bool val)       { mEnableSpatial = val; }
 
+	bool  getDenoising() const		 { return mEnableDenoising; }
+	void  setDenoising(bool val)	 { mEnableDenoising = val; }
+
 protected:
 	ResourceManager(uint32_t width, uint32_t height, SampleCallbacks *callbacks) : mWidth(width), mHeight(height), mpAppCallbacks(callbacks) {}
 
@@ -159,6 +162,7 @@ protected:
 	bool     mEnableWeightedRIS = true;
 	bool     mEnableTemporal = true;
 	bool     mEnableSpatial = true;
+	bool     mEnableDenoising = true;
 	float    mMinT = 1.0e-4f;
 
 	// If using the resource manager to manage an environment map, its filename is here.

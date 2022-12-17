@@ -373,6 +373,12 @@ void RenderingPipeline::onGuiRender(SampleCallbacks* pSample, Gui* pGui)
 		mpResourceManager->setSpatial(mDoSpatialReuse);
 	}
 
+	if (mPipeUsesDenoising)
+	{
+		pGui->addCheckBox("Denoising", mDoDenoising);
+		mpResourceManager->setDenoising(mDoDenoising);
+	}
+
 	pGui->addText("");
 
 	// Enable an option to enable/disable binding of the camera to a path

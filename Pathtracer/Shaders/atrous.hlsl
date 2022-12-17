@@ -86,31 +86,38 @@ void DenoisingRayGen()
 	// Initialize random number generator
 	uint randSeed = initRand(pixelIndex.x + dim.x * pixelIndex.y, gFrameCount, 16);
 
-	if (gIter == 0) {
-		gDenoiseIn[pixelIndex] = gShadedOutput[pixelIndex];
-	}
-	else {
-		gDenoiseIn[pixelIndex] = gDenoiseOut[pixelIndex];
-	}
+	if (gEnableDenoise)
+	{
+		if (gIter == 0) {
+			gDenoiseIn[pixelIndex] = gShadedOutput[pixelIndex];
+		}
+		else {
+			gDenoiseIn[pixelIndex] = gDenoiseOut[pixelIndex];
+		}
 
-	float3 sum = float3(0.f, 0.f, 0.f);
-	for (int i = 0; i < 25; i++) {
-		int2 offset = offsets[i] * stepsize;
-		uint2 uv = pixelIndex + offset;
+		float3 sum = float3(0.f, 0.f, 0.f);
+		for (int i = 0; i < 25; i++) {
+			int2 offset = offsets[i] * stepsize;
+			uint2 uv = pixelIndex + offset;
 
-		// Clamp indices to image width and height
-		uv.x = clamp(uv.x, 0, dim.x - 1);
-		uv.y = clamp(uv.y, 0, dim.y - 1);
+			// Clamp indices to image width and height
+			uv.x = clamp(uv.x, 0, dim.x - 1);
+			uv.y = clamp(uv.y, 0, dim.y - 1);
 
-		// Apply kernel
-		float3 col = gDenoiseIn[uv].xyz;
-		sum += col * kernel[i];
+			// Apply kernel
+			float3 col = gDenoiseIn[uv].xyz;
+			sum += col * kernel[i];
+		}
+
+		if (gIter == gTotalIter - 1) {
+			gOutput[pixelIndex] = float4(sum, 1.f);
+		}
+		else {
+			gDenoiseOut[pixelIndex] = float4(sum, 1.f);
+		}
 	}
-
-	if (gIter == gTotalIter - 1) {
-		gOutput[pixelIndex] = float4(sum, 1.f);
-	}
-	else {
-		gDenoiseOut[pixelIndex] = float4(sum, 1.f);
+	else
+	{
+		gOutput[pixelIndex] = gShadedOutput[pixelIndex];
 	}
 }
