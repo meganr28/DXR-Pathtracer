@@ -28,11 +28,11 @@ public:
 	using SharedPtr = std::shared_ptr<DenoisingPass>;
 	using SharedConstPtr = std::shared_ptr<const DenoisingPass>;
 
-	static SharedPtr create(const std::string& outBuf) { return SharedPtr(new DenoisingPass(outBuf)); }
+	static SharedPtr create(const std::string& outBuf, const int iter, const int totalIter) { return SharedPtr(new DenoisingPass(outBuf, iter, totalIter)); }
 	virtual ~DenoisingPass() = default;
 
 protected:
-	DenoisingPass(const std::string& outBuf);
+	DenoisingPass(const std::string& outBuf, const int iter, const int totalIter);
 
 	// RenderPass functionality
 	bool initialize(RenderContext* pRenderContext, ResourceManager::SharedPtr pResManager) override;
@@ -53,6 +53,12 @@ protected:
 	std::string                   mOutChannel;
 
 	bool                          mDoDenoise = true;
+	int32_t                       mIter = 0;
+	int32_t                       mTotalIter = 0;
+	int32_t                       mFilterSize = 80;       ///< A-Trous filter size
+	float                         mColorPhi = 150.f;      ///< Color weight
+	float                         mNormalPhi = 0.5f;      ///< Normal weight
+	float                         mPositionPhi = 0.4f;    ///< Normal weight
 
 	// Counter to initialize thin lens random numbers each frame
 	uint32_t                      mFrameCount = 0x1456u;                        ///< A frame counter to act as seed for random number generator 

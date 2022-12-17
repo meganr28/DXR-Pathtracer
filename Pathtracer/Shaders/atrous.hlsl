@@ -35,6 +35,12 @@ shared cbuffer GlobalCB
 {
 	uint  gFrameCount;    // Frame counter to act as random seed 
 	bool  gEnableDenoise;
+	uint  gFilterSize;
+	float gColorPhi;
+	float gNormalPhi;
+	float gPositionPhi;
+	uint  gIter;
+	uint  gTotalIter;
 }
 
 // Input and output textures
@@ -57,12 +63,6 @@ static const int2 offsets[25] = { int2(-2, -2), int2(-2, -1), int2(-2, 0), int2(
 								  int2(1, -2), int2(1, -1), int2(1, 0), int2(1, 1), int2(1, 2),
 								  int2(2, -2), int2(2, -1), int2(2, 0), int2(2, 1), int2(2, 2) };
 
-//static const int offsets_y[25] = { -2, -1, 0, 1, 2,
-//					 -2, -1, 0, 1, 2,
-//					 -2, -1, 0, 1, 2,
-//					 -2, -1, 0, 1, 2,
-//					 -2, -1, 0, 1, 2 };
-
 static const float kernel[25] = { 1.f / 256.f, 1.f / 64.f, 3.f / 128.f, 1.f / 64.f, 1.f / 256.f,
 								  1.f / 64.f, 1.f / 16.f, 3.f / 32.f, 1.f / 16.f, 1 / 64.f,
 								  3.f / 128.f, 3.f / 32.f, 9.f / 64.f, 3.f / 32.f, 3.f / 128.f,
@@ -81,10 +81,17 @@ void DenoisingRayGen()
 	float4 worldNorm = gNorm[pixelIndex];
 
 	// Edge weights
-	int stepsize = 1;
+	int stepsize = 1 << gIter;
 
 	// Initialize random number generator
 	uint randSeed = initRand(pixelIndex.x + dim.x * pixelIndex.y, gFrameCount, 16);
+
+	if (gIter == 0) {
+		gDenoiseIn[pixelIndex] = gShadedOutput[pixelIndex];
+	}
+	else {
+		gDenoiseIn[pixelIndex] = gDenoiseOut[pixelIndex];
+	}
 
 	float3 sum = float3(0.f, 0.f, 0.f);
 	for (int i = 0; i < 25; i++) {
@@ -96,9 +103,14 @@ void DenoisingRayGen()
 		uv.y = clamp(uv.y, 0, dim.y - 1);
 
 		// Apply kernel
-		float3 col = gShadedOutput[uv].xyz;
+		float3 col = gDenoiseIn[uv].xyz;
 		sum += col * kernel[i];
 	}
 
-	gOutput[pixelIndex] = float4(sum, 1.f);
+	if (gIter == gTotalIter - 1) {
+		gOutput[pixelIndex] = float4(sum, 1.f);
+	}
+	else {
+		gDenoiseOut[pixelIndex] = float4(sum, 1.f);
+	}
 }

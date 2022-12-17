@@ -25,8 +25,10 @@ namespace {
 	const char* kEntryPointRayGen = "DenoisingRayGen";
 };
 
-DenoisingPass::DenoisingPass(const std::string& outBuf) :
+DenoisingPass::DenoisingPass(const std::string& outBuf, const int iter, const int totalIter) :
 	mOutChannel(outBuf),
+	mIter(iter),
+	mTotalIter(totalIter),
 	::RenderPass("Denoising Pass", "Denoising Options") 
 {
 }
@@ -70,7 +72,10 @@ void DenoisingPass::renderGui(Gui* pGui)
 {
 	int dirty = 0;
 	// User-controlled number of light samples (M)
-	dirty |= (int)pGui->addCheckBox(mDoDenoise ? "Disable Denosing" : "Enable Denoising", mDoDenoise);
+	dirty |= (int)pGui->addIntVar("Filter Size", mFilterSize, 0, 512);
+	dirty |= (int)pGui->addFloatVar("Color Weight", mColorPhi, 0.f, 200.f);
+	dirty |= (int)pGui->addFloatVar("Normal Weight", mNormalPhi, 0.f, 10.f);
+	dirty |= (int)pGui->addFloatVar("Position Weight", mPositionPhi, 0.f, 10.f);
 	if (dirty) setRefreshFlag();
 }
 
@@ -86,6 +91,12 @@ void DenoisingPass::execute(RenderContext* pRenderContext)
 	auto globalVars = mpRays->getGlobalVars();
 	globalVars["GlobalCB"]["gFrameCount"] = mFrameCount++;
 	globalVars["GlobalCB"]["gEnableDenoise"] = mDoDenoise; // TODO: add variable for this
+	globalVars["GlobalCB"]["gFilterSize"] = mFilterSize; 
+	globalVars["GlobalCB"]["gColorPhi"] = mColorPhi;
+	globalVars["GlobalCB"]["gNormalPhi"] = mNormalPhi;
+	globalVars["GlobalCB"]["gPositionPhi"] = mPositionPhi;
+	globalVars["GlobalCB"]["gIter"] = mIter;
+	globalVars["GlobalCB"]["gTotalIter"] = mTotalIter;
 
 	// Pass G-Buffer textures to shader
 	globalVars["gPos"] = mpResManager->getTexture("WorldPosition");

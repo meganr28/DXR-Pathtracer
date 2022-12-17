@@ -40,21 +40,19 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	params.mTemporalReuse = pipeline->mDoTemporalReuse;
 	params.mSpatialReuse = pipeline->mDoSpatialReuse;
 
-	int spatialPasses = 1;
-
 	// Add passes into our pipeline
 	pipeline->setPass(0, RayTracedGBufferPass::create()); // TODO: change to ray traced g-buffer pass
 	//pipeline->setPass(1, BuildCellReservoirsPass::create("HDRColorOutput")); // build grid reservoirs and temporal reuse
 	//pipeline->setPass(2, SampleLightGridPass::create("HDRColorOutput")); // use grid to perform shading
 	pipeline->setPass(1, CreateLightSamplesPass::create("HDRColorOutput", params)); // collect light samples and temporal reuse
-
 	pipeline->setPass(2, SpatialReusePass::create("HDRColorOutput", params)); // spatial reuse
+	pipeline->setPass(3, ShadeWithReservoirsPass::create("HDRColorOutput", params)); // use reservoirs to perform shading
 
-	for (int i = 0; i < spatialPasses; i++) {
-		pipeline->setPass(3 + i, ShadeWithReservoirsPass::create("HDRColorOutput", params)); // use reservoirs to perform shading
+	int num_iterations = 5;
+	for (int i = 0; i < num_iterations; i++) {
+		pipeline->setPass(4 + i, DenoisingPass::create("HDRColorOutput", i, num_iterations));
 	}
-	pipeline->setPass(3 + spatialPasses, DenoisingPass::create("HDRColorOutput"));
-	pipeline->setPass(3 + spatialPasses + 1, SimpleToneMappingPass::create("HDRColorOutput", ResourceManager::kOutputChannel));
+	pipeline->setPass(4 + num_iterations, SimpleToneMappingPass::create("HDRColorOutput", ResourceManager::kOutputChannel));
 
 	// Define a set of config / window parameters for our program
     SampleConfig config;
