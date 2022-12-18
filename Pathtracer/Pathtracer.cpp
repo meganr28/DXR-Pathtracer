@@ -19,27 +19,44 @@
 #include "Falcor.h"
 #include "../SharedUtils/RenderingPipeline.h"
 #include "Passes/LightProbeGBufferPass.h"
+#include "Passes/RayTracedGBufferPass.h"
 #include "Passes/BuildCellReservoirsPass.h"
 #include "Passes/SampleLightGridPass.h"
 #include "Passes/CreateLightSamplesPass.h"
+#include "Passes/SpatialReusePass.h"
 #include "Passes/ShadeWithReservoirsPass.h"
 #include "Passes/SimpleAccumulationPass.h"
 #include "Passes/SimpleToneMappingPass.h"
 #include "Passes/FullGlobalIlluminationPass.h"
+#include "Passes/DenoisingPass.h"
 
 int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nShowCmd)
 {
 	// Create our rendering pipeline
 	RenderingPipeline *pipeline = new RenderingPipeline();
 
+	RenderParams params;
+	params.mEnableReSTIR = pipeline->mDoWeightedRIS;
+	params.mTemporalReuse = pipeline->mDoTemporalReuse;
+	params.mSpatialReuse = pipeline->mDoSpatialReuse;
+
 	// Add passes into our pipeline
-	pipeline->setPass(0, LightProbeGBufferPass::create()); // TODO: change to ray traced g-buffer pass
-	//pipeline->setPass(1, BuildCellReservoirsPass::create("HDRColorOutput")); // build grid reservoirs and temporal reuse
-	//pipeline->setPass(2, SampleLightGridPass::create("HDRColorOutput")); // use grid to perform shading
-	pipeline->setPass(1, CreateLightSamplesPass::create("HDRColorOutput")); // build grid reservoirs and temporal reuse
-	pipeline->setPass(2, ShadeWithReservoirsPass::create("HDRColorOutput")); // use grid to perform shading
-	//pipeline->setPass(1, FullGlobalIlluminationPass::create("HDRColorOutput")); 
-	pipeline->setPass(3, SimpleToneMappingPass::create("HDRColorOutput", ResourceManager::kOutputChannel));
+	pipeline->setPass(0, RayTracedGBufferPass::create()); 
+	pipeline->setPass(1, CreateLightSamplesPass::create("HDRColorOutput", params));  // collect light samples and temporal reuse
+
+	int spatial_iterations = 1;
+	for (int i = 0; i < spatial_iterations; i++) {
+		pipeline->setPass(2 + i, SpatialReusePass::create("HDRColorOutput", params, i, spatial_iterations)); // spatial reuse
+	}
+	
+	pipeline->setPass(2 + spatial_iterations, ShadeWithReservoirsPass::create("HDRColorOutput", params)); // use reservoirs to perform shading
+
+	// Apply denoising filter (num. iterations dependent on filter size)
+	int num_iterations = (int)glm::floor(glm::log2(pipeline->getFilterSize() / 5.f));
+	for (int j = 0; j < num_iterations; j++) {
+		pipeline->setPass(3 + spatial_iterations + j, DenoisingPass::create("HDRColorOutput", j, num_iterations));
+	}
+	pipeline->setPass(3 + spatial_iterations + num_iterations, SimpleToneMappingPass::create("HDRColorOutput", ResourceManager::kOutputChannel));
 
 	// Define a set of config / window parameters for our program
     SampleConfig config;

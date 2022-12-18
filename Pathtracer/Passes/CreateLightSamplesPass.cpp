@@ -15,8 +15,11 @@ namespace {
 	const char* kEntryIndirectClosestHit = "IndirectClosestHit";
 };
 
-CreateLightSamplesPass::CreateLightSamplesPass(const std::string& outBuf)
-	: mOutChannel(outBuf), ::RenderPass("Create Light Samples Pass", "Create Light Samples Options")
+CreateLightSamplesPass::CreateLightSamplesPass(const std::string& outBuf, const RenderParams& params) : 
+	mOutChannel(outBuf), 
+	mEnableReSTIR(params.mEnableReSTIR), 
+	mDoTemporalReuse(params.mTemporalReuse),
+	::RenderPass("Create Light Samples Pass", "Create Light Samples Options")
 {
 }
 
@@ -26,7 +29,7 @@ bool CreateLightSamplesPass::initialize(RenderContext* pRenderContext, ResourceM
 	mpResManager = pResManager;
 
 	// Request texture resources for this pass (Note: We do not need a z-buffer since ray tracing does not generate one by default)
-	mpResManager->requestTextureResources({ "WorldPosition", "WorldNormal", "MaterialDiffuse", "CurrReservoirs"});
+	mpResManager->requestTextureResources({ "WorldPosition", "WorldNormal", "MaterialDiffuse", "CurrReservoirs", "PrevReservoirs"});
 	mpResManager->requestTextureResource(mOutChannel);
 	mpResManager->requestTextureResource(ResourceManager::kEnvironmentMap);
 
@@ -52,11 +55,27 @@ bool CreateLightSamplesPass::initialize(RenderContext* pRenderContext, ResourceM
 	return true;
 }
 
+bool CreateLightSamplesPass::hasCameraMoved()
+{
+	if (!mpScene || !mpScene->getActiveCamera())
+	{
+		return false;
+	}
+	bool hasCameraChanged = (mpLastCameraMatrix != mpScene->getActiveCamera()->getViewProjMatrix());
+	return hasCameraChanged;
+}
+
 void CreateLightSamplesPass::initScene(RenderContext* pRenderContext, Scene::SharedPtr pScene)
 {
 	// Save copy of scene
 	if (pScene) {
 		mpScene = std::dynamic_pointer_cast<RtScene>(pScene);
+	}
+
+	// Get copy of scene's camera matrix
+	if (mpScene && mpScene->getActiveCamera())
+	{
+		mpLastCameraMatrix = mpScene->getActiveCamera()->getViewProjMatrix();
 	}
 
 	// Pass scene to ray tracer
@@ -70,6 +89,10 @@ void CreateLightSamplesPass::renderGui(Gui* pGui)
 	int dirty = 0;
 	// User-controlled number of light samples (M)
 	dirty |= (int)pGui->addIntVar("M", mLightSamples, 0, 32); // TODO: change this to scene lights count
+	// Enable/disable different passes
+	dirty |= (int)pGui->addCheckBox(mEnableReSTIR ? "Show Direct Lighting" : "Show ReSTIR", mEnableReSTIR);
+	dirty |= (int)pGui->addCheckBox(mDoVisibilityReuse ? "Disable Visibility Reuse" : "Enable Visibility Reuse", mDoVisibilityReuse);
+	dirty |= (int)pGui->addCheckBox(mDoTemporalReuse ? "Disable Temporal Reuse" : "Enable Temporal Reuse", mDoTemporalReuse);
 	if (dirty) setRefreshFlag();
 }
 
@@ -85,11 +108,17 @@ void CreateLightSamplesPass::execute(RenderContext* pRenderContext)
 	auto globalVars = mpRays->getGlobalVars();
 	globalVars["GlobalCB"]["gMinT"] = mpResManager->getMinTDist();
 	globalVars["GlobalCB"]["gFrameCount"] = mFrameCount++;
-	globalVars["GlobalCB"]["gDoIndirectLighting"] = mDoIndirectLighting;
-	globalVars["GlobalCB"]["gDoDirectLighting"] = mDoDirectLighting;
 	globalVars["GlobalCB"]["gMaxDepth"] = mRayDepth;
 	globalVars["GlobalCB"]["gLightSamples"] = mLightSamples;
 	globalVars["GlobalCB"]["gEmitMult"] = 1.0f;
+	globalVars["GlobalCB"]["gLastCameraMatrix"] = mpLastCameraMatrix;
+	if (hasCameraMoved()) mpLastCameraMatrix = mpScene->getActiveCamera()->getViewProjMatrix();
+
+	globalVars["GlobalCB"]["gDoIndirectLighting"] = mDoIndirectLighting;
+	globalVars["GlobalCB"]["gDoDirectLighting"] = mDoDirectLighting;
+	globalVars["GlobalCB"]["gEnableWeightedRIS"] = mpResManager->getWeightedRIS();
+	globalVars["GlobalCB"]["gDoVisiblityReuse"] = mDoVisibilityReuse;
+	globalVars["GlobalCB"]["gDoTemporalReuse"] = mpResManager->getTemporal();
 	
 	// Pass G-Buffer textures to shader
 	globalVars["gPos"]        = mpResManager->getTexture("WorldPosition");
@@ -99,6 +128,7 @@ void CreateLightSamplesPass::execute(RenderContext* pRenderContext)
 
 	// Pass ReGIR grid structure for updating
 	globalVars["gCurrReservoirs"]  = mpResManager->getTexture("CurrReservoirs");
+	globalVars["gPrevReservoirs"]  = mpResManager->getTexture("PrevReservoirs");
 
 	//globalVars["gOutput"]     = outTex;
 

@@ -3,17 +3,17 @@
 #include "../SharedUtils/RenderPass.h"
 #include "../SharedUtils/RayLaunch.h"
 
-class CreateLightSamplesPass : public ::RenderPass, inherit_shared_from_this<::RenderPass, CreateLightSamplesPass>
+class SpatialReusePass : public ::RenderPass, inherit_shared_from_this<::RenderPass, SpatialReusePass>
 {
 public:
-	using SharedPtr = std::shared_ptr<CreateLightSamplesPass>;
-	using SharedConstPtr = std::shared_ptr<const CreateLightSamplesPass>;
+	using SharedPtr = std::shared_ptr<SpatialReusePass>;
+	using SharedConstPtr = std::shared_ptr<const SpatialReusePass>;
 
-	static SharedPtr create(const std::string &outBuf, const RenderParams &params) { return SharedPtr(new CreateLightSamplesPass(outBuf, params)); }
-	virtual ~CreateLightSamplesPass() = default;
+	static SharedPtr create(const std::string &outBuf, const RenderParams& params, const int iter, const int totalIter) { return SharedPtr(new SpatialReusePass(outBuf, params, iter, totalIter)); }
+	virtual ~SpatialReusePass() = default;
 
 protected:
-	CreateLightSamplesPass(const std::string& outBuf, const RenderParams& params);
+	SpatialReusePass(const std::string& outBuf, const RenderParams& params, const int iter, const int totalIter);
 
 	// RenderPass functionality
 	bool initialize(RenderContext* pRenderContext, ResourceManager::SharedPtr pResManager) override;
@@ -25,7 +25,6 @@ protected:
 	bool requiresScene() override { return true; }       // Adds 'load scene' option to GUI.
 	bool usesRayTracing() override { return true; }      // Removes a GUI control that is confusing for this simple demo
 	bool usesEnvironmentMap() override { return true; }  // Use environment map to illuminate the scene
-	bool hasCameraMoved();                               // Determine if there has been any camera motion.
 
 	// Internal state variables for this pass
 	RayLaunch::SharedPtr          mpRays;              ///< Wrapper around DXR pass
@@ -35,17 +34,15 @@ protected:
 	std::string                   mOutChannel;
 
 	// User controls to switch on/off certain ray types
-	bool                          mDoIndirectLighting = true;
-	bool                          mDoDirectLighting = true;
 	bool                          mEnableReSTIR = true;
-	bool                          mDoVisibilityReuse = true;
-	bool                          mDoTemporalReuse = true;
+	bool                          mDoSpatialReuse = true;
 		
-	int32_t                       mLightSamples = 32;  ///< Number of initial candidates (M)
 	int32_t                       mRayDepth = 1;       ///< Current max. ray depth
+	int32_t						  mSpatialNeighbors = 20;
+	int32_t						  mSpatialRadius = 5;
 	const int32_t                 mMaxRayDepth = 8;    ///< Max supported ray depth
-	
-	mat4                          mpLastCameraMatrix;
+	int32_t                       mIter = 0;
+	int32_t                       mTotalIter = 0;
 	
 	// Counter to initialize thin lens random numbers each frame
 	uint32_t                      mFrameCount = 0x1456u;                        ///< A frame counter to act as seed for random number generator 

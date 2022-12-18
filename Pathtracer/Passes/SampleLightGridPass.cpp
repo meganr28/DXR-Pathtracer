@@ -4,7 +4,7 @@ namespace {
 	const char* kFileRayTrace = "Shaders\\sampleLightGrid.hlsl";
 
 	// Function names for shader entry points
-	const char* kEntryPointRayGen = "BuildCellReservoirsRayGen";
+	const char* kEntryPointRayGen = "SampleLightGridRayGen";
 	
 	const char* kEntryPointMiss0 = "ShadowMiss";
 	const char* kEntryShadowAnyHit = "ShadowAnyHit";
@@ -69,7 +69,7 @@ void SampleLightGridPass::renderGui(Gui* pGui)
 {
 	int dirty = 0;
 	// User-controlled max depth
-	//dirty |= (int)pGui->addIntVar("Max Ray Depth", mRayDepth, 0, mMaxRayDepth);
+	dirty |= (int)pGui->addIntVar("Max Ray Depth", mRayDepth, 0, mMaxRayDepth);
 	// Checkbox to determine if we are shooting indirect rays or not
 	//dirty |= (int)pGui->addCheckBox(mDoIndirectLighting ? "Enable Direct Illumination" : "Enable Indirect Illumination", mDoIndirectLighting);
 	if (dirty) setRefreshFlag();

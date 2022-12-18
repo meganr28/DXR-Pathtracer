@@ -139,14 +139,34 @@ public:
 	float getMinTDist() const        { return mMinT; }
 	void  setMinTDist(float newMinT) { mMinT = newMinT; }
 
+	uint32_t getFilterSize() const		   { return mFilterSize; }
+	void  setFilterSize(uint32_t newFilterSize) { mFilterSize = newFilterSize; }
+
+	bool  getWeightedRIS() const     { return mEnableWeightedRIS; }
+	void  setWeightedRIS(bool val)   { mEnableWeightedRIS = val; }
+
+	bool  getTemporal() const        { return mEnableTemporal; }
+	void  setTemporal(bool val)      { mEnableTemporal = val; }
+
+	bool  getSpatial() const         { return mEnableSpatial; }
+	void  setSpatial(bool val)       { mEnableSpatial = val; }
+
+	bool  getDenoising() const		 { return mEnableDenoising; }
+	void  setDenoising(bool val)	 { mEnableDenoising = val; }
+
 protected:
 	ResourceManager(uint32_t width, uint32_t height, SampleCallbacks *callbacks) : mWidth(width), mHeight(height), mpAppCallbacks(callbacks) {}
 
     // Various internal state
     uint32_t mWidth = 0;    
-    uint32_t mHeight = 0;       
+    uint32_t mHeight = 0;   
+	uint32_t mFilterSize = 80;
 	bool     mIsInitialized = false;
 	bool     mUpdatedFlag = true;
+	bool     mEnableWeightedRIS = true;
+	bool     mEnableTemporal = true;
+	bool     mEnableSpatial = true;
+	bool     mEnableDenoising = true;
 	float    mMinT = 1.0e-4f;
 
 	// If using the resource manager to manage an environment map, its filename is here.

@@ -160,7 +160,7 @@ void IndirectClosestHit(inout IndirectRayPayload rayData, BuiltInTriangleInterse
 }
 
 [shader("raygeneration")]
-void FullGIRayGen()
+void SampleLightGridRayGen()
 {
 	// Get our pixel's position on the screen
 	uint2 pixelIndex = DispatchRaysIndex().xy;
@@ -180,7 +180,7 @@ void FullGIRayGen()
 	float3 shadeColor = albedo;
 	if (worldPos.w != 0)
 	{
-		// Jitter intersection point within size of grid cell
+		/*// Jitter intersection point within size of grid cell
 		float3 gridLoadPosition = worldPos + float3(nextRand(randSeed), nextRand(randSeed), nextRand(randSeed)) * 
 			2.0f - 1.0f) * gHalfGridCellSize;
 
@@ -192,7 +192,7 @@ void FullGIRayGen()
 		Reservoir risReservoir = sampleLightUsingRIS(shadedPoint);
 		float lightSampleWeight = (risReservoir.totalWeight / M) / risReservoir.sampleTargetPdf;
 		LightSample light = loadLight(risReservoir.lightSample);
-		shadeColor = light.intensity * Brdf(light, worldPos) * lightSampleWeight;
+		shadeColor = light.intensity * Brdf(light, worldPos) * lightSampleWeight;*/
 	}
 	
 	gOutput[pixelIndex] = float4(shadeColor, 1.f);

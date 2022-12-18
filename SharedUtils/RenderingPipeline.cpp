@@ -287,6 +287,19 @@ void RenderingPipeline::onGuiRender(SampleCallbacks* pSample, Gui* pGui)
 		pGui->addSeparator();
 	}
 
+	if (mpResourceManager)
+	{
+		pGui->addText("Denoising Options:");
+		pGui->addText("     ");
+		if (pGui->addDropdown("##filterSizeSelector", mFilterSizeDropdown, mFilterSizeSelection, true))
+		{
+			mpResourceManager->setFilterSize(mFilterSizeArray[mFilterSizeSelection]);
+			setFilterSize(mFilterSizeArray[mFilterSizeSelection]);
+			mGlobalPipeRefresh = true;
+		}
+		pGui->addSeparator();
+	}
+
 	// To avoid putting GUIs on top of each other, offset later passes
 	int yGuiOffset = 0;
 
@@ -350,6 +363,33 @@ void RenderingPipeline::onGuiRender(SampleCallbacks* pSample, Gui* pGui)
 		// Offset the next GUI by the current one's height
 		if (mActivePasses[i])
 			yGuiOffset += mActivePasses[i]->getGuiSize().y; 
+	}
+
+	pGui->addText("");
+
+	// Enable an option to enable/disable binding of the camera to a path
+	if (mPipeUsesWeightedRIS && mpResourceManager)
+	{
+		pGui->addCheckBox("Weighted RIS", mDoWeightedRIS);
+		mpResourceManager->setWeightedRIS(mDoWeightedRIS);
+	}
+
+	if (mPipeUsesTemporal)
+	{
+		pGui->addCheckBox("Temporal Reuse", mDoTemporalReuse);
+		mpResourceManager->setTemporal(mDoTemporalReuse);
+	}
+
+	if (mPipeUsesSpatial)
+	{
+		pGui->addCheckBox("Spatial Reuse", mDoSpatialReuse);
+		mpResourceManager->setSpatial(mDoSpatialReuse);
+	}
+
+	if (mPipeUsesDenoising)
+	{
+		pGui->addCheckBox("Denoising", mDoDenoising);
+		mpResourceManager->setDenoising(mDoDenoising);
 	}
 
 	pGui->addText("");

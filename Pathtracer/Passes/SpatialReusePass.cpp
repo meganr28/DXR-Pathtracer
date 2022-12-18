@@ -1,34 +1,33 @@
-#include "ShadeWithReservoirsPass.h"
+#include "SpatialReusePass.h"
 
 namespace {
-	const char* kFileRayTrace = "Shaders\\shadeWithReservoirs.hlsl";
+	const char* kFileRayTrace = "Shaders\\spatialReuse.hlsl";
 
 	// Function names for shader entry points
-	const char* kEntryPointRayGen = "ShadeWithReservoirsRayGen";
+	const char* kEntryPointRayGen = "SpatialReuseRayGen";
 	
 	const char* kEntryPointMiss0 = "ShadowMiss";
 	const char* kEntryShadowAnyHit = "ShadowAnyHit";
 	const char* kEntryShadowClosestHit = "ShadowClosestHit";
-
-	const char* kEntryPointMiss1 = "IndirectMiss";
-	const char* kEntryIndirectAnyHit = "IndirectAnyHit";
-	const char* kEntryIndirectClosestHit = "IndirectClosestHit";
 };
 
-ShadeWithReservoirsPass::ShadeWithReservoirsPass(const std::string& outBuf, const RenderParams& params) : 
+SpatialReusePass::SpatialReusePass(const std::string& outBuf, const RenderParams& params, const int iter, const int totalIter) :
 	mOutChannel(outBuf), 
 	mEnableReSTIR(params.mEnableReSTIR),
-	::RenderPass("Shade With Reservoirs Pass", "Shade With Reservoirs Options")
+	mIter(iter),
+	mTotalIter(totalIter),
+	::RenderPass("Spatial Reuse Pass", "Spatial Reuse Options")
 {
 }
 
-bool ShadeWithReservoirsPass::initialize(RenderContext* pRenderContext, ResourceManager::SharedPtr pResManager)
+bool SpatialReusePass::initialize(RenderContext* pRenderContext, ResourceManager::SharedPtr pResManager)
 {
 	// Stash a copy of our resource manager, allowing us to access shared rendering resources
 	mpResManager = pResManager;
 
 	// Request texture resources for this pass (Note: We do not need a z-buffer since ray tracing does not generate one by default)
-	mpResManager->requestTextureResources({ "WorldPosition", "WorldNormal", "MaterialDiffuse", "CurrReservoirs", "PrevReservoirs", "ShadedOutput"});
+	mpResManager->requestTextureResources({ "WorldPosition", "WorldNormal", "MaterialDiffuse", "CurrReservoirs"
+		, "SpatialReservoirsIn", "SpatialReservoirsOut", "SpatialReservoirs"});
 	mpResManager->requestTextureResource(mOutChannel);
 	mpResManager->requestTextureResource(ResourceManager::kEnvironmentMap);
 
@@ -41,10 +40,6 @@ bool ShadeWithReservoirsPass::initialize(RenderContext* pRenderContext, Resource
 	// Ray type 0 (shadow rays)
 	mpRays->addMissShader(kFileRayTrace, kEntryPointMiss0);
 	mpRays->addHitShader(kFileRayTrace, kEntryShadowClosestHit, kEntryShadowAnyHit);
-
-	// Ray type 1 (indirect GI rays)
-	mpRays->addMissShader(kFileRayTrace, kEntryPointMiss1);
-	mpRays->addHitShader(kFileRayTrace, kEntryIndirectClosestHit, kEntryIndirectAnyHit);
 	
 	// Compile
 	mpRays->compileRayProgram();
@@ -54,7 +49,7 @@ bool ShadeWithReservoirsPass::initialize(RenderContext* pRenderContext, Resource
 	return true;
 }
 
-void ShadeWithReservoirsPass::initScene(RenderContext* pRenderContext, Scene::SharedPtr pScene)
+void SpatialReusePass::initScene(RenderContext* pRenderContext, Scene::SharedPtr pScene)
 {
 	// Save copy of scene
 	if (pScene) {
@@ -67,15 +62,16 @@ void ShadeWithReservoirsPass::initScene(RenderContext* pRenderContext, Scene::Sh
 	}
 }
 
-void ShadeWithReservoirsPass::renderGui(Gui* pGui)
+void SpatialReusePass::renderGui(Gui* pGui)
 {
 	int dirty = 0;
-	// Checkbox to determine if we are using ReSTIR or not
-	dirty |= (int)pGui->addCheckBox(mEnableReSTIR ? "Show Direct Lighting" : "Show ReSTIR", mEnableReSTIR);
+	// Enable/disable different passes
+	dirty |= (int)pGui->addIntVar("Spatial Neighbors", mSpatialNeighbors, 0, 100);
+	dirty |= (int)pGui->addIntVar("Spatial Radius", mSpatialRadius, 0, 100);
 	if (dirty) setRefreshFlag();
 }
 
-void ShadeWithReservoirsPass::execute(RenderContext* pRenderContext)
+void SpatialReusePass::execute(RenderContext* pRenderContext)
 {
 	// Get output buffer and clear it to black
 	Texture::SharedPtr outTex = mpResManager->getClearedTexture(mOutChannel, vec4(0.f, 0.f, 0.f, 0.f));
@@ -87,11 +83,14 @@ void ShadeWithReservoirsPass::execute(RenderContext* pRenderContext)
 	auto globalVars = mpRays->getGlobalVars();
 	globalVars["GlobalCB"]["gMinT"] = mpResManager->getMinTDist();
 	globalVars["GlobalCB"]["gFrameCount"] = mFrameCount++;
-	globalVars["GlobalCB"]["gDoIndirectLighting"] = mDoIndirectLighting;
-	globalVars["GlobalCB"]["gDoDirectLighting"] = mDoDirectLighting;
-	globalVars["GlobalCB"]["gEnableReSTIR"] = mpResManager->getWeightedRIS();
 	globalVars["GlobalCB"]["gMaxDepth"] = mRayDepth;
 	globalVars["GlobalCB"]["gEmitMult"] = 1.0f;
+	globalVars["GlobalCB"]["gSpatialNeighbors"] = mSpatialNeighbors;
+	globalVars["GlobalCB"]["gSpatialRadius"] = mSpatialRadius;
+	globalVars["GlobalCB"]["gEnableReSTIR"] = mpResManager->getWeightedRIS();
+	globalVars["GlobalCB"]["gDoSpatialReuse"] = mpResManager->getSpatial();
+	globalVars["GlobalCB"]["gIter"] = mIter;
+	globalVars["GlobalCB"]["gTotalIter"] = mTotalIter;
 	
 	// Pass G-Buffer textures to shader
 	globalVars["gPos"]        = mpResManager->getTexture("WorldPosition");
@@ -100,9 +99,10 @@ void ShadeWithReservoirsPass::execute(RenderContext* pRenderContext)
 	globalVars["gEmissive"]   = mpResManager->getTexture("Emissive");
 
 	// Pass ReGIR grid structure for updating
-	globalVars["gSpatialReservoirs"]  = mpResManager->getTexture("SpatialReservoirs");
-	globalVars["gPrevReservoirs"]	  = mpResManager->getTexture("PrevReservoirs");
-	globalVars["gShadedOutput"] = mpResManager->getTexture("ShadedOutput");
+	globalVars["gCurrReservoirs"]  = mpResManager->getTexture("CurrReservoirs");
+	globalVars["gSpatialReservoirsIn"]  = mpResManager->getTexture("SpatialReservoirsIn");
+	globalVars["gSpatialReservoirsOut"] = mpResManager->getTexture("SpatialReservoirsOut");
+	globalVars["gSpatialReservoirs"]    = mpResManager->getTexture("SpatialReservoirs");
 
 	//globalVars["gOutput"]     = outTex;
 
