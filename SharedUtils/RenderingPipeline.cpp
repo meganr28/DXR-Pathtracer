@@ -287,6 +287,19 @@ void RenderingPipeline::onGuiRender(SampleCallbacks* pSample, Gui* pGui)
 		pGui->addSeparator();
 	}
 
+	if (mpResourceManager)
+	{
+		pGui->addText("Denoising Options:");
+		pGui->addText("     ");
+		if (pGui->addDropdown("##filterSizeSelector", mFilterSizeDropdown, mFilterSizeSelection, true))
+		{
+			mpResourceManager->setFilterSize(mFilterSizeArray[mFilterSizeSelection]);
+			setFilterSize(mFilterSizeArray[mFilterSizeSelection]);
+			mGlobalPipeRefresh = true;
+		}
+		pGui->addSeparator();
+	}
+
 	// To avoid putting GUIs on top of each other, offset later passes
 	int yGuiOffset = 0;
 

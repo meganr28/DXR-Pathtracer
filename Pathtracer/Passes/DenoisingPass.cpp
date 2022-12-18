@@ -91,7 +91,7 @@ void DenoisingPass::execute(RenderContext* pRenderContext)
 	auto globalVars = mpRays->getGlobalVars();
 	globalVars["GlobalCB"]["gFrameCount"] = mFrameCount++;
 	globalVars["GlobalCB"]["gEnableDenoise"] = mpResManager->getDenoising();
-	globalVars["GlobalCB"]["gFilterSize"] = mFilterSize; 
+	globalVars["GlobalCB"]["gFilterSize"] = mpResManager->getFilterSize(); 
 	globalVars["GlobalCB"]["gColorPhi"] = mColorPhi;
 	globalVars["GlobalCB"]["gNormalPhi"] = mNormalPhi;
 	globalVars["GlobalCB"]["gPositionPhi"] = mPositionPhi;
@@ -101,14 +101,11 @@ void DenoisingPass::execute(RenderContext* pRenderContext)
 	// Pass G-Buffer textures to shader
 	globalVars["gPos"] = mpResManager->getTexture("WorldPosition");
 	globalVars["gNorm"] = mpResManager->getTexture("WorldNormal");
-	globalVars["gDiffuseMtl"] = mpResManager->getTexture("MaterialDiffuse");
-	globalVars["gEmissive"] = mpResManager->getTexture("Emissive");
 
 	// Pass ReGIR grid structure for updating
 	globalVars["gShadedOutput"] = mpResManager->getTexture("ShadedOutput");
 	globalVars["gDenoiseIn"] = mpResManager->getTexture("DenoiseIn");
 	globalVars["gDenoiseOut"] = mpResManager->getTexture("DenoiseOut");
-	globalVars["gDenoisedImage"] = mpResManager->getTexture("DenoisedImage");
 
 	globalVars["gOutput"]     = outTex;
 

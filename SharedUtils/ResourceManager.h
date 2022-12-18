@@ -139,6 +139,9 @@ public:
 	float getMinTDist() const        { return mMinT; }
 	void  setMinTDist(float newMinT) { mMinT = newMinT; }
 
+	uint32_t getFilterSize() const		   { return mFilterSize; }
+	void  setFilterSize(uint32_t newFilterSize) { mFilterSize = newFilterSize; }
+
 	bool  getWeightedRIS() const     { return mEnableWeightedRIS; }
 	void  setWeightedRIS(bool val)   { mEnableWeightedRIS = val; }
 
@@ -156,7 +159,8 @@ protected:
 
     // Various internal state
     uint32_t mWidth = 0;    
-    uint32_t mHeight = 0;       
+    uint32_t mHeight = 0;   
+	uint32_t mFilterSize = 80;
 	bool     mIsInitialized = false;
 	bool     mUpdatedFlag = true;
 	bool     mEnableWeightedRIS = true;

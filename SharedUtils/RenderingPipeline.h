@@ -64,6 +64,9 @@ public:
 	virtual void onGuiRender(SampleCallbacks* pSample, Gui* pGui) override;
 	virtual void onDroppedFile(SampleCallbacks* pSample, const std::string& filename) override {}
 
+	float getFilterSize() const { return (float)mFilterSize; }
+	void  setFilterSize(uint32_t newFilterSize) { mFilterSize = newFilterSize; }
+
 	bool mDoWeightedRIS = true;
 	bool mDoTemporalReuse = true;
 	bool mDoSpatialReuse = true;
@@ -158,6 +161,7 @@ private:
 	bool mPipeRequiresScene      = false;
 	bool mPipeRequiresRaster     = false;
 	bool mPipeRequiresRayTracing = false;
+	bool mPipeRequiresDenoising  = false;
 	bool mPipeAppliesPostprocess = false;
 	bool mPipeUsesCompute        = false;
 	bool mPipeUsesEnvMap         = false;
@@ -168,6 +172,9 @@ private:
 	bool mPipeUsesSpatial        = true;
 	bool mPipeUsesDenoising		 = true;
 
+	// Denoising variables
+	uint32_t mFilterSize		 = 80;
+
 	// Helpers to clarify code querying if a pass can be removed (or another can be added after it)
 	bool canRemovePass(uint32_t passNum);
 	bool canAddPassAfter(uint32_t passNum);
@@ -176,6 +183,11 @@ private:
 	Gui::DropdownList mMinTDropdown = { { 0, "0.1" }, { 1, "0.01" }, { 2, "0.001" },{ 3, "1e-4" }, { 4, "1e-5" }, { 5, "1e-6" }, { 6, "1e-7" }, {7, "0"} };
 	float             mMinTArray[8] = { 0.1f, 0.01f, 0.001f, 1e-4f, 1e-5f, 1e-6f, 1e-7f, 0.0f };
 	uint32_t          mMinTSelection = 3;
+
+	// A dropdown allowing us to select the filter size to use for denoising
+	Gui::DropdownList mFilterSizeDropdown = { { 0, "10x10" }, { 1, "20x20" }, { 2, "40x40" },{ 3, "80x80" }, { 4, "160x160" }, { 5, "320x320" } };
+	uint32_t          mFilterSizeArray[6] = { 10, 20, 40, 80, 160, 320 };
+	uint32_t          mFilterSizeSelection = 3;
 
     std::string mTmpStr = "";
 };

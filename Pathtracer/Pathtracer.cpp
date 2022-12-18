@@ -42,13 +42,11 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 
 	// Add passes into our pipeline
 	pipeline->setPass(0, RayTracedGBufferPass::create()); // TODO: change to ray traced g-buffer pass
-	//pipeline->setPass(1, BuildCellReservoirsPass::create("HDRColorOutput")); // build grid reservoirs and temporal reuse
-	//pipeline->setPass(2, SampleLightGridPass::create("HDRColorOutput")); // use grid to perform shading
 	pipeline->setPass(1, CreateLightSamplesPass::create("HDRColorOutput", params)); // collect light samples and temporal reuse
 	pipeline->setPass(2, SpatialReusePass::create("HDRColorOutput", params)); // spatial reuse
 	pipeline->setPass(3, ShadeWithReservoirsPass::create("HDRColorOutput", params)); // use reservoirs to perform shading
 
-	int num_iterations = 5;
+	int num_iterations = (int)glm::floor(glm::log2(pipeline->getFilterSize() / 5.f));
 	for (int i = 0; i < num_iterations; i++) {
 		pipeline->setPass(4 + i, DenoisingPass::create("HDRColorOutput", i, num_iterations));
 	}

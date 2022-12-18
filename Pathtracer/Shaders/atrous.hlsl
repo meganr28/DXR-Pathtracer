@@ -17,13 +17,9 @@
 **********************************************************************************************************************/
 #include "HostDeviceSharedMacros.h"
 #include "HostDeviceData.h"
-#include "restirUtils.hlsli"
 #include "simpleGIUtils.hlsli"
-#include "shadowRay.hlsli"
 
 #define PI                 3.14159265f
-#define SPATIAL_NEIGHBORS  20
-#define SPATIAL_RADIUS     5
 
 // Include and import common Falcor utilities and data structures
 import Raytracing;                   // Shared ray tracing specific functions & data
@@ -46,13 +42,10 @@ shared cbuffer GlobalCB
 // Input and output textures
 shared Texture2D<float4>   gPos;           // G-buffer world-space position
 shared Texture2D<float4>   gNorm;          // G-buffer world-space normal
-shared Texture2D<float4>   gDiffuseMtl;    // G-buffer diffuse material
-shared Texture2D<float4>   gEmissive;
-shared RWTexture2D<float4> gShadedOutput;
-shared RWTexture2D<float4> gOutput;                // Output to store shaded result
-shared RWTexture2D<float4> gDenoiseIn;             // Output to store shaded result
-shared RWTexture2D<float4> gDenoiseOut;            // Output to store shaded result
-shared RWTexture2D<float4> gDenoisedImage;         // Output to store shaded result
+shared RWTexture2D<float4> gShadedOutput;  // Result from spatial reuse pass
+shared RWTexture2D<float4> gOutput;        // Output to store final denoised result
+shared RWTexture2D<float4> gDenoiseIn;     // Store intermediate denoised result
+shared RWTexture2D<float4> gDenoiseOut;    // Store intermediate denoised result
 
 // Environment map
 shared Texture2D<float4>   gEnvMap;
@@ -76,26 +69,27 @@ void DenoisingRayGen()
 	uint2 pixelIndex = DispatchRaysIndex().xy;
 	uint2 dim = DispatchRaysDimensions().xy;
 
-	// Read G-buffer data
-	float4 worldPos = gPos[pixelIndex];
-	float4 worldNorm = gNorm[pixelIndex];
-
-	// Edge weights
-	int stepsize = 1 << gIter;
-
-	// Initialize random number generator
-	uint randSeed = initRand(pixelIndex.x + dim.x * pixelIndex.y, gFrameCount, 16);
-
 	if (gEnableDenoise)
 	{
-		if (gIter == 0) {
-			gDenoiseIn[pixelIndex] = gShadedOutput[pixelIndex];
-		}
-		else {
-			gDenoiseIn[pixelIndex] = gDenoiseOut[pixelIndex];
+		// Edge weights
+		int stepsize = 1 << gIter;
+
+		// Read G-buffer data
+		float4 pos = gPos[pixelIndex];
+		float4 norm = gNorm[pixelIndex];
+		float4 col = gShadedOutput[pixelIndex];
+
+		if (gIter != 0) {
+			col = gDenoiseOut[pixelIndex];
 		}
 
+		float3 col_n = float3(0.0, 0.0, 0.0);
+		float3 norm_n = float3(0.0, 0.0, 0.0);
+		float3 pos_n = float3(0.0, 0.0, 0.0);
+
 		float3 sum = float3(0.f, 0.f, 0.f);
+		float sum_weights = 0.f;
+
 		for (int i = 0; i < 25; i++) {
 			int2 offset = offsets[i] * stepsize;
 			uint2 uv = pixelIndex + offset;
@@ -104,16 +98,40 @@ void DenoisingRayGen()
 			uv.x = clamp(uv.x, 0, dim.x - 1);
 			uv.y = clamp(uv.y, 0, dim.y - 1);
 
-			// Apply kernel
-			float3 col = gDenoiseIn[uv].xyz;
-			sum += col * kernel[i];
+			// Color
+			if (gIter == 0) {
+				col_n = gShadedOutput[uv].xyz;
+			}
+			else {
+				col_n = gDenoiseOut[uv].xyz;
+			}
+			float3 col_diff = col.xyz - col_n;
+			float dist2 = dot(col_diff, col_diff);
+			float col_w = min(exp(-(dist2) / (gColorPhi * gColorPhi)), 1.f);
+
+			// Normal
+			norm_n = gNorm[uv].xyz;
+			float3 norm_diff = norm.xyz - norm_n;
+			dist2 = dot(norm_diff, norm_diff);
+			float norm_w = min(exp(-(dist2) / (gNormalPhi * gNormalPhi)), 1.f);
+
+			// Position
+			pos_n = gPos[uv].xyz;
+			float3 pos_diff = pos.xyz - pos_n;
+			dist2 = dot(pos_diff, pos_diff);
+			float pos_w = min(exp(-(dist2) / (gPositionPhi * gPositionPhi)), 1.f);
+
+			// Calculate weighting
+			float weight = col_w * norm_w * pos_w;
+			sum += col_n * weight * kernel[i];
+			sum_weights += weight * kernel[i];
 		}
 
 		if (gIter == gTotalIter - 1) {
-			gOutput[pixelIndex] = float4(sum, 1.f);
+			gOutput[pixelIndex] = float4(sum / sum_weights, 1.f);
 		}
 		else {
-			gDenoiseOut[pixelIndex] = float4(sum, 1.f);
+			gDenoiseOut[pixelIndex] = float4(sum / sum_weights, 1.f);
 		}
 	}
 	else
