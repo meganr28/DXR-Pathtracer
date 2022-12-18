@@ -9,11 +9,11 @@ public:
 	using SharedPtr = std::shared_ptr<SpatialReusePass>;
 	using SharedConstPtr = std::shared_ptr<const SpatialReusePass>;
 
-	static SharedPtr create(const std::string &outBuf, const RenderParams& params) { return SharedPtr(new SpatialReusePass(outBuf, params)); }
+	static SharedPtr create(const std::string &outBuf, const RenderParams& params, const int iter, const int totalIter) { return SharedPtr(new SpatialReusePass(outBuf, params, iter, totalIter)); }
 	virtual ~SpatialReusePass() = default;
 
 protected:
-	SpatialReusePass(const std::string& outBuf, const RenderParams& params);
+	SpatialReusePass(const std::string& outBuf, const RenderParams& params, const int iter, const int totalIter);
 
 	// RenderPass functionality
 	bool initialize(RenderContext* pRenderContext, ResourceManager::SharedPtr pResManager) override;
@@ -41,6 +41,8 @@ protected:
 	int32_t						  mSpatialNeighbors = 20;
 	int32_t						  mSpatialRadius = 5;
 	const int32_t                 mMaxRayDepth = 8;    ///< Max supported ray depth
+	int32_t                       mIter = 0;
+	int32_t                       mTotalIter = 0;
 	
 	// Counter to initialize thin lens random numbers each frame
 	uint32_t                      mFrameCount = 0x1456u;                        ///< A frame counter to act as seed for random number generator 

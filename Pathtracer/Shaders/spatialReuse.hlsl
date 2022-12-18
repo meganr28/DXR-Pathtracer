@@ -22,8 +22,6 @@
 #include "shadowRay.hlsli"
 
 #define PI                 3.14159265f
-#define SPATIAL_NEIGHBORS  20
-#define SPATIAL_RADIUS     5
 
 // Include and import common Falcor utilities and data structures
 import Raytracing;                   // Shared ray tracing specific functions & data
@@ -39,6 +37,8 @@ shared cbuffer GlobalCB
 	float gEmitMult;      // Multiply emissive channel by this channel
 	uint  gSpatialNeighbors;
 	uint  gSpatialRadius;
+	uint  gIter;
+	uint  gTotalIter;
 
 	bool  gEnableReSTIR;  
 	bool  gDoSpatialReuse;
@@ -51,6 +51,9 @@ shared Texture2D<float4>   gDiffuseMtl;    // G-buffer diffuse material
 shared Texture2D<float4>   gEmissive;
 shared RWTexture2D<float4> gCurrReservoirs;        // Output to store shaded result
 shared RWTexture2D<float4> gSpatialReservoirs;     // Output to store shaded result
+shared RWTexture2D<float4> gSpatialReservoirsIn;     // Output to store shaded result
+shared RWTexture2D<float4> gSpatialReservoirsOut;     // Output to store shaded result
+
 
 // Environment map
 shared Texture2D<float4>   gEnvMap;
@@ -100,6 +103,10 @@ void SpatialReuseRayGen()
 	uint randSeed = initRand(pixelIndex.x + dim.x * pixelIndex.y, gFrameCount, 16);
 
 	Reservoir reservoir = createReservoir(gCurrReservoirs[pixelIndex]);
+	if (gIter != 0) {
+		reservoir = createReservoir(gSpatialReservoirsOut[pixelIndex]);
+	}
+
 	Reservoir spatialReservoir = { 0, 0, 0, 0 };
 
 	float3 shadeColor = float3(0.f, 0.f, 0.f);
@@ -143,6 +150,9 @@ void SpatialReuseRayGen()
 				u_neighborIndex.x = max(0, min(u_neighborIndex.x, dim.x - 1));
 				u_neighborIndex.y = max(0, min(u_neighborIndex.y, dim.y - 1));
 				Reservoir neighborReservoir = createReservoir(gCurrReservoirs[u_neighborIndex]);
+				if (gIter != 0) {
+					neighborReservoir = createReservoir(gSpatialReservoirsOut[u_neighborIndex]);
+				}
 
 				float4 neighborNorm = gNorm[u_neighborIndex];
 
@@ -200,7 +210,12 @@ void SpatialReuseRayGen()
 	{
 		if (gDoSpatialReuse)
 		{
-			gSpatialReservoirs[pixelIndex] = float4(spatialReservoir.lightSample, spatialReservoir.M, spatialReservoir.weight, spatialReservoir.totalWeight);
+			if (gIter == gTotalIter - 1) {
+				gSpatialReservoirs[pixelIndex] = float4(spatialReservoir.lightSample, spatialReservoir.M, spatialReservoir.weight, spatialReservoir.totalWeight);
+			}
+			else {
+				gSpatialReservoirsOut[pixelIndex] = float4(spatialReservoir.lightSample, spatialReservoir.M, spatialReservoir.weight, spatialReservoir.totalWeight);
+			}
 		}
 		else
 		{

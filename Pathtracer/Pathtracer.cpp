@@ -41,16 +41,22 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	params.mSpatialReuse = pipeline->mDoSpatialReuse;
 
 	// Add passes into our pipeline
-	pipeline->setPass(0, RayTracedGBufferPass::create()); // TODO: change to ray traced g-buffer pass
-	pipeline->setPass(1, CreateLightSamplesPass::create("HDRColorOutput", params)); // collect light samples and temporal reuse
-	pipeline->setPass(2, SpatialReusePass::create("HDRColorOutput", params)); // spatial reuse
-	pipeline->setPass(3, ShadeWithReservoirsPass::create("HDRColorOutput", params)); // use reservoirs to perform shading
+	pipeline->setPass(0, RayTracedGBufferPass::create()); 
+	pipeline->setPass(1, CreateLightSamplesPass::create("HDRColorOutput", params));  // collect light samples and temporal reuse
 
-	int num_iterations = (int)glm::floor(glm::log2(pipeline->getFilterSize() / 5.f));
-	for (int i = 0; i < num_iterations; i++) {
-		pipeline->setPass(4 + i, DenoisingPass::create("HDRColorOutput", i, num_iterations));
+	int spatial_iterations = 1;
+	for (int i = 0; i < spatial_iterations; i++) {
+		pipeline->setPass(2 + i, SpatialReusePass::create("HDRColorOutput", params, i, spatial_iterations)); // spatial reuse
 	}
-	pipeline->setPass(4 + num_iterations, SimpleToneMappingPass::create("HDRColorOutput", ResourceManager::kOutputChannel));
+	
+	pipeline->setPass(2 + spatial_iterations, ShadeWithReservoirsPass::create("HDRColorOutput", params)); // use reservoirs to perform shading
+
+	// Apply denoising filter (num. iterations dependent on filter size)
+	int num_iterations = (int)glm::floor(glm::log2(pipeline->getFilterSize() / 5.f));
+	for (int j = 0; j < num_iterations; j++) {
+		pipeline->setPass(3 + spatial_iterations + j, DenoisingPass::create("HDRColorOutput", j, num_iterations));
+	}
+	pipeline->setPass(3 + spatial_iterations + num_iterations, SimpleToneMappingPass::create("HDRColorOutput", ResourceManager::kOutputChannel));
 
 	// Define a set of config / window parameters for our program
     SampleConfig config;
