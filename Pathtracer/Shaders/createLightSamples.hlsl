@@ -233,25 +233,25 @@ void CreateLightSamplesRayGen()
 				float G = cosTheta / (dist * dist);
 				float3 brdf = f * Le * G;
 				p_hat = length(brdf) / p;
-				updateReservoir(reservoir, p_hat, float(light), randSeed);
+				updateReservoir(reservoir, float(light), p_hat, randSeed);
 			}
 
 			// Calculate p_hat for reservoir's light
-			getLightData(reservoir.lightSample, worldPos.xyz, lightDirection, lightIntensity, dist);
+			getLightData(reservoir.y, worldPos.xyz, lightDirection, lightIntensity, dist);
 			cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
 			p_hat = length((difMatlColor.rgb / M_PI) * lightIntensity * cosTheta / (dist * dist));
 
 			if (p_hat == 0.f) {
-				reservoir.weight = 0.f;
+				reservoir.W = 0.f;
 			}
 			else {
-				reservoir.weight = (1.f / p_hat) * (reservoir.totalWeight / reservoir.M);
+				reservoir.W = (1.f / p_hat) * (reservoir.wSum / reservoir.M);
 			}
 
 			// Evaluate visibility for initial candidates
 			float shadowed = shadowRayVisibility(worldPos.xyz, lightDirection, gMinT, dist);
 			if (shadowed <= 0.001f) {
-				reservoir.weight = 0.f;
+				reservoir.W = 0.f;
 			}
 
 			// TODO: make combining reservoirs into its own function
@@ -262,28 +262,28 @@ void CreateLightSamplesRayGen()
 				Reservoir tempReservoir = { 0, 0, 0, 0 };
 
 				// Add current reservoir
-				updateReservoir(tempReservoir, p_hat * reservoir.weight * reservoir.M, reservoir.lightSample, randSeed);
+				updateReservoir(tempReservoir, reservoir.y, p_hat * reservoir.W * reservoir.M, randSeed);
 
 				// Add previous reservoir
-				getLightData(prev_reservoir.lightSample, worldPos.xyz, lightDirection, lightIntensity, dist);
+				getLightData(prev_reservoir.y, worldPos.xyz, lightDirection, lightIntensity, dist);
 				cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
 				p_hat = length((difMatlColor.rgb / M_PI) * lightIntensity * cosTheta / (dist * dist));
 				prev_reservoir.M = min(20.f * reservoir.M, prev_reservoir.M);
-				updateReservoir(tempReservoir, p_hat * prev_reservoir.weight * prev_reservoir.M, prev_reservoir.lightSample, randSeed);
+				updateReservoir(tempReservoir, prev_reservoir.y, p_hat * prev_reservoir.W * prev_reservoir.M, randSeed);
 
 				// Update M
 				tempReservoir.M = reservoir.M + prev_reservoir.M;
 
 				// Set weight
-				getLightData(tempReservoir.lightSample, worldPos.xyz, lightDirection, lightIntensity, dist);
+				getLightData(tempReservoir.y, worldPos.xyz, lightDirection, lightIntensity, dist);
 				cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
 				p_hat = length((difMatlColor.rgb / M_PI) * lightIntensity * cosTheta / (dist * dist));
 
 				if (p_hat == 0.f) {
-					tempReservoir.weight = 0.f;
+					tempReservoir.W = 0.f;
 				}
 				else {
-					tempReservoir.weight = (1.f / p_hat) * (tempReservoir.totalWeight / tempReservoir.M);
+					tempReservoir.W = (1.f / p_hat) * (tempReservoir.wSum / tempReservoir.M);
 				}
 				reservoir = tempReservoir;
 			}				
@@ -302,6 +302,6 @@ void CreateLightSamplesRayGen()
 
 	if (gEnableWeightedRIS)
 	{
-		gCurrReservoirs[pixelIndex] = float4(reservoir.lightSample, reservoir.M, reservoir.weight, reservoir.totalWeight);
+		gCurrReservoirs[pixelIndex] = float4(reservoir.y, reservoir.M, reservoir.W, reservoir.wSum);
 	}
 }

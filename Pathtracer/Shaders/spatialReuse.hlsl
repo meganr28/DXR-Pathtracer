@@ -142,10 +142,10 @@ void SpatialReuseRayGen()
 		if (gEnableReSTIR && gDoSpatialReuse)
 		{
 			// Combine current reservoir
-			getLightData(reservoir.lightSample, worldPos.xyz, lightDirection, lightIntensity, dist);
+			getLightData(reservoir.y, worldPos.xyz, lightDirection, lightIntensity, dist);
 			float cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
 			float p_hat = length((difMatlColor.rgb / M_PI) * lightIntensity * cosTheta / (dist * dist));
-			updateReservoir(spatialReservoir, p_hat * reservoir.weight * reservoir.M, reservoir.lightSample, randSeed);
+			updateReservoir(spatialReservoir, reservoir.y, p_hat * reservoir.W * reservoir.M, randSeed);
 
 			float lightCount = reservoir.M;
 			for (int i = 0; i < gSpatialNeighbors; ++i)
@@ -165,10 +165,10 @@ void SpatialReuseRayGen()
 				if (neighborNorm.w > 1.1f * worldNorm.w || neighborNorm.w < 0.9f * worldNorm.w) continue;
 
 				// Combine neighbor's reservoir
-				getLightData(neighborReservoir.lightSample, worldPos.xyz, lightDirection, lightIntensity, dist);
+				getLightData(neighborReservoir.y, worldPos.xyz, lightDirection, lightIntensity, dist);
 				cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
 				p_hat = length((difMatlColor.rgb / M_PI) * lightIntensity * cosTheta / (dist * dist));
-				updateReservoir(spatialReservoir, p_hat * neighborReservoir.weight * neighborReservoir.M, neighborReservoir.lightSample, randSeed);
+				updateReservoir(spatialReservoir, neighborReservoir.y, p_hat * neighborReservoir.W * neighborReservoir.M, randSeed);
 			
 				lightCount += neighborReservoir.M;
 			}
@@ -177,21 +177,21 @@ void SpatialReuseRayGen()
 			spatialReservoir.M = lightCount;
 
 			// Update weight
-			getLightData(spatialReservoir.lightSample, worldPos.xyz, lightDirection, lightIntensity, dist);
+			getLightData(spatialReservoir.y, worldPos.xyz, lightDirection, lightIntensity, dist);
 			cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
 			p_hat = length((difMatlColor.rgb / M_PI) * lightIntensity * cosTheta / (dist * dist));
 
 			if (p_hat == 0.f) {
-				spatialReservoir.weight = 0.f;
+				spatialReservoir.W = 0.f;
 			}
 			else {
-				spatialReservoir.weight = (1.f / max(p_hat, 0.0001f)) * (spatialReservoir.totalWeight / max(spatialReservoir.M, 0.0001f));
+				spatialReservoir.W = (1.f / max(p_hat, 0.0001f)) * (spatialReservoir.wSum / max(spatialReservoir.M, 0.0001f));
 			}
 
 			// Evaluate visibility for initial candidates
 			float shadowed = shadowRayVisibility(worldPos.xyz, lightDirection, gMinT, dist);
 			if (shadowed <= 0.001f) {
-				spatialReservoir.weight = 0.f;
+				spatialReservoir.W = 0.f;
 			}
 		}
 		else
@@ -211,10 +211,10 @@ void SpatialReuseRayGen()
 		if (gDoSpatialReuse)
 		{
 			if (gIter == gTotalIter - 1) {
-				gSpatialReservoirs[pixelIndex] = float4(spatialReservoir.lightSample, spatialReservoir.M, spatialReservoir.weight, spatialReservoir.totalWeight);
+				gSpatialReservoirs[pixelIndex] = float4(spatialReservoir.y, spatialReservoir.M, spatialReservoir.W, spatialReservoir.wSum);
 			}
 			else {
-				gSpatialReservoirsOut[pixelIndex] = float4(spatialReservoir.lightSample, spatialReservoir.M, spatialReservoir.weight, spatialReservoir.totalWeight);
+				gSpatialReservoirsOut[pixelIndex] = float4(spatialReservoir.y, spatialReservoir.M, spatialReservoir.W, spatialReservoir.wSum);
 			}
 		}
 		else
