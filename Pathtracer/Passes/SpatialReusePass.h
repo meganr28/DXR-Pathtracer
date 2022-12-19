@@ -9,11 +9,11 @@ public:
 	using SharedPtr = std::shared_ptr<SpatialReusePass>;
 	using SharedConstPtr = std::shared_ptr<const SpatialReusePass>;
 
-	static SharedPtr create(const std::string &outBuf, const RenderParams& params, const int iter, const int totalIter) { return SharedPtr(new SpatialReusePass(outBuf, params, iter, totalIter)); }
+	static SharedPtr create(const std::string &outBuf, const int iter, const int totalIter) { return SharedPtr(new SpatialReusePass(outBuf, iter, totalIter)); }
 	virtual ~SpatialReusePass() = default;
 
 protected:
-	SpatialReusePass(const std::string& outBuf, const RenderParams& params, const int iter, const int totalIter);
+	SpatialReusePass(const std::string& outBuf, const int iter, const int totalIter);
 
 	// RenderPass functionality
 	bool initialize(RenderContext* pRenderContext, ResourceManager::SharedPtr pResManager) override;

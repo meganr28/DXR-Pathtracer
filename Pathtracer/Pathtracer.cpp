@@ -46,7 +46,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 
 	int spatial_iterations = 1;
 	for (int i = 0; i < spatial_iterations; i++) {
-		pipeline->setPass(2 + i, SpatialReusePass::create("HDRColorOutput", params, i, spatial_iterations)); // spatial reuse
+		pipeline->setPass(2 + i, SpatialReusePass::create("HDRColorOutput", i, spatial_iterations)); // spatial reuse
 	}
 	
 	pipeline->setPass(2 + spatial_iterations, ShadeWithReservoirsPass::create("HDRColorOutput", params)); // use reservoirs to perform shading

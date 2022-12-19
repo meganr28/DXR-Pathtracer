@@ -11,9 +11,8 @@ namespace {
 	const char* kEntryShadowClosestHit = "ShadowClosestHit";
 };
 
-SpatialReusePass::SpatialReusePass(const std::string& outBuf, const RenderParams& params, const int iter, const int totalIter) :
+SpatialReusePass::SpatialReusePass(const std::string& outBuf, const int iter, const int totalIter) :
 	mOutChannel(outBuf), 
-	mEnableReSTIR(params.mEnableReSTIR),
 	mIter(iter),
 	mTotalIter(totalIter),
 	::RenderPass("Spatial Reuse Pass", "Spatial Reuse Options")
@@ -84,7 +83,6 @@ void SpatialReusePass::execute(RenderContext* pRenderContext)
 	globalVars["GlobalCB"]["gMinT"] = mpResManager->getMinTDist();
 	globalVars["GlobalCB"]["gFrameCount"] = mFrameCount++;
 	globalVars["GlobalCB"]["gMaxDepth"] = mRayDepth;
-	globalVars["GlobalCB"]["gEmitMult"] = 1.0f;
 	globalVars["GlobalCB"]["gSpatialNeighbors"] = mSpatialNeighbors;
 	globalVars["GlobalCB"]["gSpatialRadius"] = mSpatialRadius;
 	globalVars["GlobalCB"]["gEnableReSTIR"] = mpResManager->getWeightedRIS();
@@ -96,11 +94,9 @@ void SpatialReusePass::execute(RenderContext* pRenderContext)
 	globalVars["gPos"]        = mpResManager->getTexture("WorldPosition");
 	globalVars["gNorm"]       = mpResManager->getTexture("WorldNormal");
 	globalVars["gDiffuseMtl"] = mpResManager->getTexture("MaterialDiffuse");
-	globalVars["gEmissive"]   = mpResManager->getTexture("Emissive");
 
 	// Pass ReGIR grid structure for updating
 	globalVars["gCurrReservoirs"]  = mpResManager->getTexture("CurrReservoirs");
-	globalVars["gSpatialReservoirsIn"]  = mpResManager->getTexture("SpatialReservoirsIn");
 	globalVars["gSpatialReservoirsOut"] = mpResManager->getTexture("SpatialReservoirsOut");
 	globalVars["gSpatialReservoirs"]    = mpResManager->getTexture("SpatialReservoirs");
 

@@ -34,7 +34,6 @@ shared cbuffer GlobalCB
 	float gMinT;          // Avoid ray self-intersection
 	uint  gFrameCount;    // Frame counter to act as random seed 
 	uint  gMaxDepth;      // Max recursion depth
-	float gEmitMult;      // Multiply emissive channel by this channel
 	uint  gSpatialNeighbors;
 	uint  gSpatialRadius;
 	uint  gIter;
@@ -48,10 +47,8 @@ shared cbuffer GlobalCB
 shared Texture2D<float4>   gPos;           // G-buffer world-space position
 shared Texture2D<float4>   gNorm;          // G-buffer world-space normal
 shared Texture2D<float4>   gDiffuseMtl;    // G-buffer diffuse material
-shared Texture2D<float4>   gEmissive;
 shared RWTexture2D<float4> gCurrReservoirs;        // Output to store shaded result
 shared RWTexture2D<float4> gSpatialReservoirs;     // Output to store shaded result
-shared RWTexture2D<float4> gSpatialReservoirsIn;     // Output to store shaded result
 shared RWTexture2D<float4> gSpatialReservoirsOut;     // Output to store shaded result
 
 
@@ -121,7 +118,6 @@ void SpatialReuseRayGen()
 	float4 worldPos = gPos[pixelIndex];
 	float4 worldNorm = gNorm[pixelIndex];
 	float4 difMatlColor = gDiffuseMtl[pixelIndex];
-	float4 emissiveData = gEmissive[pixelIndex];
 
 	float3 albedo = difMatlColor.rgb;
 
