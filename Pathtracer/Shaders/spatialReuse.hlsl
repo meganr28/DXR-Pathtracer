@@ -84,6 +84,32 @@ float3 lambertianDirect(inout uint rndSeed, float3 hit, float3 norm, float3 diff
 	return color;
 }
 
+uint2 getSpatialNeighborIndex(uint2 pixelIndex, uint2 dim, int radius, inout uint randSeed) {
+	uint2 neighborIndex = uint2(0, 0);
+	uint2 neighborOffset = uint2(0, 0);
+
+	// METHOD 1
+	//float r = radius * nextRand(randSeed);
+	//float angle = 2.0f * M_PI * nextRand(randSeed);
+	//float2 neighborIndex2 = pixelIndex;
+	//neighborIndex2.x += r * cos(angle);
+	//neighborIndex2.y += r * sin(angle);
+	//uint2 u_neighborIndex = uint2(neighborIndex2);
+	//u_neighborIndex.x = max(0, min(u_neighborIndex.x, dim.x - 1));
+	//u_neighborIndex.y = max(0, min(u_neighborIndex.y, dim.y - 1));
+
+	// Calculate neighbor offset -> [0, 1] -> [0, 2 * NEIGHBOR_RADIUS] -> [-NEIGHBOR_RADIUS, NEIGHBOR_RADIUS]
+	neighborOffset.x = int(nextRand(randSeed) * 2 * radius) - radius;
+	neighborOffset.y = int(nextRand(randSeed) * 2 * radius) - radius;
+
+	// Clamp index
+	neighborIndex.x = max(0, min(pixelIndex.x + neighborOffset.x, dim.x - 1));
+	neighborIndex.y = max(0, min(pixelIndex.y + neighborOffset.y, dim.y - 1));
+	uint2 u_neighborIndex = uint2(neighborIndex);
+
+	return u_neighborIndex;
+}
+
 [shader("raygeneration")]
 void SpatialReuseRayGen()
 {
@@ -128,33 +154,13 @@ void SpatialReuseRayGen()
 			float lightCount = reservoir.M;
 			for (int i = 0; i < gSpatialNeighbors; ++i)
 			{
-				float radius = gSpatialRadius * nextRand(randSeed);
-				float angle = 2.0f * M_PI * nextRand(randSeed);
-
-				// Calculate neighbor pixel
-				float2 neighborIndex = pixelIndex;
-				//uint2 neighborOffset = uint2(0, 0);
-
-				neighborIndex.x += radius * cos(angle);
-				neighborIndex.y += radius * sin(angle);
-
-				// Calculate neighbor offset -> [0, 1] -> [0, 2 * NEIGHBOR_RADIUS] -> [-NEIGHBOR_RADIUS, NEIGHBOR_RADIUS]
-				//neighborOffset.x = int(nextRand(randSeed) * 2 * SPATIAL_RADIUS) - SPATIAL_RADIUS;
-				//neighborOffset.y = int(nextRand(randSeed) * 2 * SPATIAL_RADIUS) - SPATIAL_RADIUS;
-				//neighborIndex += neighborOffset;
-
-				// Clamp index
-				//neighborIndex.x = max(0, min(neighborIndex.x + neighborOffset.x, dim.x - 1));
-				//neighborIndex.y = max(0, min(neighborIndex.y + neighborOffset.y, dim.y - 1));
-				uint2 u_neighborIndex = uint2(neighborIndex);
-				u_neighborIndex.x = max(0, min(u_neighborIndex.x, dim.x - 1));
-				u_neighborIndex.y = max(0, min(u_neighborIndex.y, dim.y - 1));
-				Reservoir neighborReservoir = createReservoir(gCurrReservoirs[u_neighborIndex]);
+				uint2 neighborIndex = getSpatialNeighborIndex(pixelIndex, dim, gSpatialRadius, randSeed);
+				Reservoir neighborReservoir = createReservoir(gCurrReservoirs[neighborIndex]);
 				if (gIter != 0) {
-					neighborReservoir = createReservoir(gSpatialReservoirsOut[u_neighborIndex]);
+					neighborReservoir = createReservoir(gSpatialReservoirsOut[neighborIndex]);
 				}
 
-				float4 neighborNorm = gNorm[u_neighborIndex];
+				float4 neighborNorm = gNorm[neighborIndex];
 
 				// Check that the angle between the normals are within 25 degrees
 				if ((dot(worldNorm.xyz, neighborNorm.xyz)) < 0.906) continue;
@@ -185,8 +191,6 @@ void SpatialReuseRayGen()
 			else {
 				spatialReservoir.weight = (1.f / max(p_hat, 0.0001f)) * (spatialReservoir.totalWeight / max(spatialReservoir.M, 0.0001f));
 			}
-
-			//spatialReservoir = createReservoir(gCurrReservoirs[pixelIndex]);
 
 			// Evaluate visibility for initial candidates
 			float shadowed = shadowRayVisibility(worldPos.xyz, lightDirection, gMinT, dist);

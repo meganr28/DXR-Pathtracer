@@ -33,21 +33,18 @@ Reservoir combineReservoirs(Reservoir curr, Reservoir prev, in uint randSeed) {
 	return merged;
 }
 
-//Reservoir sampleLightsRIS(float3 p, int lightsCount) {
-//	Reservoir r;
-//	for (int i = 0; i < min(lightCount, 8); i++) {
-//		Reservoir input;
-//		LightSample candidate = sampleFromSourcePool(sourcePdf);
-//		float3 lightVector = candidate.position - gridCellCenter;
-//		float lightDistanceSquared = max(gMinDistanceSquared, dot(lightVector, lightVector));
-//		float sourcePdf = 1 / 8;
-//		input.sampleTargetPdf = candidate.intensity / lightDistanceSquared;
-//		updateReservoir(r, input, weight, randSeed);
-//	}
-//	return r;
-//}
-//
-//Reservoir sampleLightsUsingRIS(float3 p) {
-//	// TODO: use this to sample w.r.t. BRDF during 
-//	return 0.0;
-//}
+// Halton sequence - https://en.wikipedia.org/wiki/Halton_sequence
+float halton(inout uint i, uint b)
+{
+	i = (1664525u * i + 1013904223u);
+
+	float f = 1.0;
+	float r = 0.0;
+
+	while (i > 0) {
+		f = f / float(b);
+		r = r + f * float(i % b);
+		i = floor(i / b);
+	}
+	return r;
+}

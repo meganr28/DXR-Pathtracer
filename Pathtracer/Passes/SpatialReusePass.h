@@ -38,8 +38,8 @@ protected:
 	bool                          mDoSpatialReuse = true;
 		
 	int32_t                       mRayDepth = 1;       ///< Current max. ray depth
-	int32_t						  mSpatialNeighbors = 20;
-	int32_t						  mSpatialRadius = 5;
+	int32_t						  mSpatialNeighbors = 5;
+	int32_t						  mSpatialRadius = 30;
 	const int32_t                 mMaxRayDepth = 8;    ///< Max supported ray depth
 	int32_t                       mIter = 0;
 	int32_t                       mTotalIter = 0;
