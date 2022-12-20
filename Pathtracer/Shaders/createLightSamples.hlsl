@@ -196,19 +196,19 @@ void CreateLightSamplesRayGen()
 	uint2 dim = DispatchRaysDimensions().xy;
 
 	// Read G-buffer data
-	float4 worldPos = gPos[pixelIndex];
-	float4 worldNorm = gNorm[pixelIndex];
-	float4 difMatlColor = gDiffuseMtl[pixelIndex];
-	float4 emissiveData = gEmissive[pixelIndex];
+	GBuffer gBuffer;
+	gBuffer.pos = gPos[pixelIndex];
+	gBuffer.norm = gNorm[pixelIndex];
+	gBuffer.color = gDiffuseMtl[pixelIndex];
 
-	float3 albedo = difMatlColor.rgb;
+	float3 albedo = gBuffer.color.rgb;
 
 	// Initialize random number generator
 	uint randSeed = initRand(pixelIndex.x + dim.x * pixelIndex.y, gFrameCount, 16);
 
 	Reservoir reservoir = { 0, 0, 0, 0 };
 	float3 shadeColor = float3(0.f, 0.f, 0.f);
-	if (worldPos.w != 0)
+	if (gBuffer.pos.w != 0)
 	{
 		// To hold information about current light
 		float dist;
@@ -241,21 +241,22 @@ void CreateLightSamplesRayGen()
 			for (int i = 0; i < min(gLightsCount, gLightSamples); i++) {
 				// Randomly pick a light to sample
 				int light = min(int(nextRand(randSeed) * gLightsCount), gLightsCount - 1);
-				getLightData(light, worldPos.xyz, lightDirection, lightIntensity, dist);
+				getLightData(light, gBuffer.pos.xyz, lightDirection, lightIntensity, dist);
 
 				// Calcuate light weight based on BRDF and PDF
 				float p = 1.f / float(gLightsCount);
-				cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
+				cosTheta = saturate(dot(gBuffer.norm.xyz, lightDirection));
 
 				// Evaluate p_hat
-				p_hat = evaluateBSDF(difMatlColor.rgb, lightIntensity, cosTheta, dist);
+				p_hat = evaluateBSDF(gBuffer.color.rgb, lightIntensity, cosTheta, dist);
 				updateReservoir(reservoir, float(light), p_hat / p, randSeed);
 			}
 
 			// Calculate p_hat(r.y) for reservoir's light
-			getLightData(reservoir.y, worldPos.xyz, lightDirection, lightIntensity, dist);
-			cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
-			p_hat = evaluateBSDF(difMatlColor.rgb, lightIntensity, cosTheta, dist);
+			//getLightData(reservoir.y, worldPos.xyz, lightDirection, lightIntensity, dist);
+			//cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
+			cosTheta = evaluateCos(pixelIndex, lightDirection, lightIntensity, dist, reservoir.y);
+			p_hat = evaluateBSDF(gBuffer.color.rgb, lightIntensity, cosTheta, dist);
 
 			// Update reservoir weight
 			if (p_hat == 0.f) {
@@ -266,7 +267,7 @@ void CreateLightSamplesRayGen()
 			}
 
 			// Evaluate visibility for initial candidates
-			float shadowed = shadowRayVisibility(worldPos.xyz, lightDirection, gMinT, dist);
+			float shadowed = shadowRayVisibility(gBuffer.pos.xyz, lightDirection, gMinT, dist);
 			if (shadowed <= 0.001f) {
 				reservoir.W = 0.f;
 			}
@@ -280,7 +281,7 @@ void CreateLightSamplesRayGen()
 
 				// Get previous reservoir
 				Reservoir prev_reservoir = { 0, 0, 0, 0 };
-				uint2 prevIndex = pickTemporalNeighbor(worldPos, pixelIndex, dim);
+				uint2 prevIndex = pickTemporalNeighbor(gBuffer.pos, pixelIndex, dim);
 				if (prevIndex.x != -1 && prevIndex.y != -1) {
 					prev_reservoir = createReservoir(gPrevReservoirs[prevIndex]);
 				}
@@ -289,9 +290,9 @@ void CreateLightSamplesRayGen()
 				updateReservoir(tempReservoir, reservoir.y, p_hat * reservoir.W * reservoir.M, randSeed);
 
 				// Add previous reservoir
-				getLightData(prev_reservoir.y, worldPos.xyz, lightDirection, lightIntensity, dist);
-				cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
-				p_hat = length((difMatlColor.rgb / M_PI) * lightIntensity * cosTheta / (dist * dist));
+				getLightData(prev_reservoir.y, gBuffer.pos.xyz, lightDirection, lightIntensity, dist);
+				cosTheta = saturate(dot(gBuffer.norm.xyz, lightDirection));
+				p_hat = length((gBuffer.color.rgb / M_PI) * lightIntensity * cosTheta / (dist * dist));
 				prev_reservoir.M = min(20.f * reservoir.M, prev_reservoir.M);
 				updateReservoir(tempReservoir, prev_reservoir.y, p_hat * prev_reservoir.W * prev_reservoir.M, randSeed);
 
@@ -299,9 +300,9 @@ void CreateLightSamplesRayGen()
 				tempReservoir.M = reservoir.M + prev_reservoir.M;
 
 				// Set weight
-				getLightData(tempReservoir.y, worldPos.xyz, lightDirection, lightIntensity, dist);
-				cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
-				p_hat = length((difMatlColor.rgb / M_PI) * lightIntensity * cosTheta / (dist * dist));
+				getLightData(tempReservoir.y, gBuffer.pos.xyz, lightDirection, lightIntensity, dist);
+				cosTheta = saturate(dot(gBuffer.norm.xyz, lightDirection));
+				p_hat = length((gBuffer.color.rgb / M_PI) * lightIntensity * cosTheta / (dist * dist));
 
 				if (p_hat == 0.f) {
 					tempReservoir.W = 0.f;
@@ -314,7 +315,7 @@ void CreateLightSamplesRayGen()
 		}
 		else
 		{
-			shadeColor += lambertianDirect(randSeed, worldPos.xyz, worldNorm.xyz, difMatlColor.rgb);
+			shadeColor += lambertianDirect(randSeed, gBuffer.pos.xyz, gBuffer.norm.xyz, gBuffer.color.rgb);
 		}
 	}
 	else
