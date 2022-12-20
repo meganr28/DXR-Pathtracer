@@ -220,24 +220,7 @@ void CreateLightSamplesRayGen()
 			float cosTheta = 0.f;
 			float p_hat = 0.f;
 
-			//// Get previous reservoir
-			//Reservoir prev_reservoir = { 0, 0, 0, 0 };
-
-			//if (gFrameCount > 0)
-			//{
-			//	float4 prevScreenPos = mul(worldPos, gLastCameraMatrix);
-			//	prevScreenPos /= prevScreenPos.w;
-
-			//	uint2 prevIndex = pixelIndex;
-			//	prevIndex.x = ((prevScreenPos.x + 1.f) * 0.5f) * (float)dim.x;
-			//	prevIndex.y = ((1.f - prevScreenPos.y) * 0.5f) * (float)dim.y;
-
-			//	if (prevIndex.x >= 0 && prevIndex.x < dim.x && prevIndex.y >= 0 && prevIndex.y < dim.y) {
-			//		prev_reservoir = createReservoir(gPrevReservoirs[prevIndex]);
-			//	}
-			//}
-
-			// Generate initial candidate light samples (M = 32)
+			// 1. WEIGHTED RIS: Generate initial candidate light samples (M = 32)
 			for (int i = 0; i < min(gLightsCount, gLightSamples); i++) {
 				// Randomly pick a light to sample
 				int light = min(int(nextRand(randSeed) * gLightsCount), gLightsCount - 1);
@@ -253,10 +236,7 @@ void CreateLightSamplesRayGen()
 			}
 
 			// Calculate p_hat(r.y) for reservoir's light
-			//getLightData(reservoir.y, worldPos.xyz, lightDirection, lightIntensity, dist);
-			//cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
-			cosTheta = evaluateCos(pixelIndex, lightDirection, lightIntensity, dist, reservoir.y);
-			p_hat = evaluateBSDF(gBuffer.color.rgb, lightIntensity, cosTheta, dist);
+			p_hat = evaluatePHat(gBuffer, lightDirection, lightIntensity, dist, reservoir.y);
 
 			// Update reservoir weight
 			if (p_hat == 0.f) {
@@ -266,7 +246,7 @@ void CreateLightSamplesRayGen()
 				reservoir.W = (1.f / p_hat) * (reservoir.wSum / reservoir.M);
 			}
 
-			// Evaluate visibility for initial candidates
+			// 2. VISIBILITY REUSE: Evaluate visibility for initial candidates
 			float shadowed = shadowRayVisibility(gBuffer.pos.xyz, lightDirection, gMinT, dist);
 			if (shadowed <= 0.001f) {
 				reservoir.W = 0.f;
@@ -274,6 +254,7 @@ void CreateLightSamplesRayGen()
 
 			// TODO: make combining reservoirs into its own function
 			// tempReservoir = combineReservoirs(reservoir, prev_reservoir, randSeed);
+			// 3. TEMPORAL REUSE
 			if (gDoTemporalReuse)
 			{
 				// Temporal reuse
@@ -290,9 +271,7 @@ void CreateLightSamplesRayGen()
 				updateReservoir(tempReservoir, reservoir.y, p_hat * reservoir.W * reservoir.M, randSeed);
 
 				// Add previous reservoir
-				getLightData(prev_reservoir.y, gBuffer.pos.xyz, lightDirection, lightIntensity, dist);
-				cosTheta = saturate(dot(gBuffer.norm.xyz, lightDirection));
-				p_hat = length((gBuffer.color.rgb / M_PI) * lightIntensity * cosTheta / (dist * dist));
+				p_hat = evaluatePHat(gBuffer, lightDirection, lightIntensity, dist, prev_reservoir.y);
 				prev_reservoir.M = min(20.f * reservoir.M, prev_reservoir.M);
 				updateReservoir(tempReservoir, prev_reservoir.y, p_hat * prev_reservoir.W * prev_reservoir.M, randSeed);
 
@@ -300,9 +279,7 @@ void CreateLightSamplesRayGen()
 				tempReservoir.M = reservoir.M + prev_reservoir.M;
 
 				// Set weight
-				getLightData(tempReservoir.y, gBuffer.pos.xyz, lightDirection, lightIntensity, dist);
-				cosTheta = saturate(dot(gBuffer.norm.xyz, lightDirection));
-				p_hat = length((gBuffer.color.rgb / M_PI) * lightIntensity * cosTheta / (dist * dist));
+				p_hat = evaluatePHat(gBuffer, lightDirection, lightIntensity, dist, tempReservoir.y);
 
 				if (p_hat == 0.f) {
 					tempReservoir.W = 0.f;

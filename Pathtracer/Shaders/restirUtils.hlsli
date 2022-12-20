@@ -38,29 +38,13 @@ float evaluateBSDF(float3 albedo, float3 lightIntensity, float cosTheta, float l
 	return length(f * Le * G);
 }
 
-float evaluatePHat(float4 worldPos, float4 worldNorm, float4 difMatlColor, float light) {
-	// Light data
-	float dist;
-	float3 lightIntensity;
-	float3 lightDirection;
-
+float evaluatePHat(GBuffer gBuffer, inout float3 lightDirection, inout float3 lightIntensity, inout float dist, float light) {
 	// Calculate p_hat(r.y) for reservoir's light sample
-	getLightData(light, worldPos.xyz, lightDirection, lightIntensity, dist);
-	float cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
-	float p_hat = evaluateBSDF(difMatlColor.rgb, lightIntensity, cosTheta, dist);
+	getLightData(light, gBuffer.pos.xyz, lightDirection, lightIntensity, dist);
+	float cosTheta = saturate(dot(gBuffer.norm.xyz, lightDirection));
+	float p_hat = evaluateBSDF(gBuffer.color.rgb, lightIntensity, cosTheta, dist);
 
 	return p_hat;
-}
-
-float evaluateCos(uint2 pixelIndex, inout float3 lightDirection, inout float3 lightIntensity, inout float dist, float light) {
-	float4 worldPos = gPos[pixelIndex];
-	float4 worldNorm = gNorm[pixelIndex];
-	
-	// Calculate p_hat(r.y) for reservoir's light sample
-	getLightData(light, worldPos.xyz, lightDirection, lightIntensity, dist);
-	float cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
-
-	return cosTheta;
 }
 
 //void combineReservoirs(inout Reservoir merged, Reservoir curr, Reservoir prev, in uint randSeed) {
