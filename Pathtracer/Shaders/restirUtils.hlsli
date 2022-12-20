@@ -1,3 +1,6 @@
+#define BIASED
+//#define UNBIASED
+
 struct GBuffer {
 	float4 pos;
 	float4 norm;

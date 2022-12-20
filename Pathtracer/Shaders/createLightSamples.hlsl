@@ -285,7 +285,28 @@ void CreateLightSamplesRayGen()
 					tempReservoir.W = 0.f;
 				}
 				else {
+#ifdef BIASED
 					tempReservoir.W = (1.f / p_hat) * (tempReservoir.wSum / tempReservoir.M);
+#endif
+#ifdef UNBIASED
+					float p_hat_orig = p_hat;
+					float Z = 0.f;
+					uint2 q[2] = { pixelIndex, prevIndex };
+					Reservoir r[2] = { reservoir, prev_reservoir };
+					for (int i = 0; i < 2; i++) {
+						// Get gBuffer data
+						GBuffer pixelGBuffer;
+						pixelGBuffer.pos = gPos[q[i]]; // TODO: will need to store previous gBuffer data
+						pixelGBuffer.norm = gNorm[q[i]];
+						pixelGBuffer.color = gDiffuseMtl[q[i]];
+
+						p_hat = evaluatePHat(pixelGBuffer, lightDirection, lightIntensity, dist, tempReservoir.y);
+						if (p_hat > 0) {
+							Z += r[i].M;
+						}
+					}
+					tempReservoir.W = (1.f / p_hat_orig) * (tempReservoir.wSum / Z);
+#endif
 				}
 				reservoir = tempReservoir;
 			}				

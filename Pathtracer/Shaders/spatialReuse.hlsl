@@ -141,16 +141,19 @@ void SpatialReuseRayGen()
 		float3 lightIntensity;
 		float3 lightDirection;
 
+		uint2 q[6];
+		Reservoir r[6];
+
 		if (gEnableReSTIR && gDoSpatialReuse)
 		{
-			// Combine current reservoir
-			//float p_hat = evaluatePHat()
-			getLightData(reservoir.y, gBuffer.pos.xyz, lightDirection, lightIntensity, dist);
-			float cosTheta = saturate(dot(gBuffer.norm.xyz, lightDirection));
-			float p_hat = length((gBuffer.color.rgb / M_PI) * lightIntensity * cosTheta / (dist * dist));
+			// Combine current reservoir with spatial reservoir
+			float p_hat = evaluatePHat(gBuffer, lightDirection, lightIntensity, dist, reservoir.y);
 			updateReservoir(spatialReservoir, reservoir.y, p_hat * reservoir.W * reservoir.M, randSeed);
+			q[0] = pixelIndex;
+			r[0] = reservoir;
 
-			float lightCount = reservoir.M;
+			// Loop through neighbors and combine them with spatial reservoir
+			float sampleCount = reservoir.M;
 			for (int i = 0; i < gSpatialNeighbors; ++i)
 			{
 				uint2 neighborIndex = getSpatialNeighborIndex(pixelIndex, dim, randSeed);
@@ -158,6 +161,8 @@ void SpatialReuseRayGen()
 				if (gIter != 0) {
 					neighborReservoir = createReservoir(gSpatialReservoirsOut[neighborIndex]);
 				}
+				q[i + 1] = neighborIndex;
+				r[i + 1] = neighborReservoir;
 
 				float4 neighborNorm = gNorm[neighborIndex];
 
@@ -168,27 +173,42 @@ void SpatialReuseRayGen()
 				if (neighborNorm.w > 1.1f * gBuffer.norm.w || neighborNorm.w < 0.9f * gBuffer.norm.w) continue;
 
 				// Combine neighbor's reservoir
-				getLightData(neighborReservoir.y, gBuffer.pos.xyz, lightDirection, lightIntensity, dist);
-				cosTheta = saturate(dot(gBuffer.norm.xyz, lightDirection));
-				p_hat = length((gBuffer.color.rgb / M_PI) * lightIntensity * cosTheta / (dist * dist));
+				p_hat = evaluatePHat(gBuffer, lightDirection, lightIntensity, dist, neighborReservoir.y);
 				updateReservoir(spatialReservoir, neighborReservoir.y, p_hat * neighborReservoir.W * neighborReservoir.M, randSeed);
 			
-				lightCount += neighborReservoir.M;
+				sampleCount += neighborReservoir.M;
 			}
 
 			// Update M
-			spatialReservoir.M = lightCount;
+			spatialReservoir.M = sampleCount;
 
 			// Update weight
-			getLightData(spatialReservoir.y, gBuffer.pos.xyz, lightDirection, lightIntensity, dist);
-			cosTheta = saturate(dot(gBuffer.norm.xyz, lightDirection));
-			p_hat = length((gBuffer.color.rgb / M_PI) * lightIntensity * cosTheta / (dist * dist));
+			p_hat = evaluatePHat(gBuffer, lightDirection, lightIntensity, dist, spatialReservoir.y);
 
 			if (p_hat == 0.f) {
 				spatialReservoir.W = 0.f;
 			}
 			else {
-				spatialReservoir.W = (1.f / max(p_hat, 0.0001f)) * (spatialReservoir.wSum / max(spatialReservoir.M, 0.0001f));
+#ifdef BIASED
+				spatialReservoir.W = (1.f / p_hat) * (spatialReservoir.wSum / spatialReservoir.M);
+#endif
+#ifdef UNBIASED
+				float p_hat_orig = p_hat;
+				float Z = 0.f;
+				for (int i = 0; i < 6; i++) {
+					// Get gBuffer data
+					GBuffer pixelGBuffer;
+					pixelGBuffer.pos = gPos[q[i]]; // TODO: will need to store previous gBuffer data
+					pixelGBuffer.norm = gNorm[q[i]];
+					pixelGBuffer.color = gDiffuseMtl[q[i]];
+
+					p_hat = evaluatePHat(pixelGBuffer, lightDirection, lightIntensity, dist, spatialReservoir.y);
+					if (p_hat > 0) {
+						Z += r[i].M;
+					}
+				}
+				spatialReservoir.W = (1.f / p_hat_orig) * (spatialReservoir.wSum / Z);
+#endif
 			}
 
 			// Evaluate visibility for initial candidates
