@@ -169,6 +169,25 @@ void IndirectClosestHit(inout IndirectRayPayload rayData, BuiltInTriangleInterse
 	}
 }
 
+uint2 pickTemporalNeighbor(float4 worldPos, uint2 pixelIndex, uint2 dim) 
+{
+	if (gFrameCount > 0)
+	{
+		float4 prevScreenPos = mul(worldPos, gLastCameraMatrix);
+		prevScreenPos /= prevScreenPos.w;
+
+		uint2 prevIndex = pixelIndex;
+		prevIndex.x = ((prevScreenPos.x + 1.f) * 0.5f) * (float)dim.x;
+		prevIndex.y = ((1.f - prevScreenPos.y) * 0.5f) * (float)dim.y;
+
+		if (prevIndex.x >= 0 && prevIndex.x < dim.x && prevIndex.y >= 0 && prevIndex.y < dim.y) {
+			return prevIndex;
+		}
+	}
+
+	return uint2(-1, -1);
+}
+
 [shader("raygeneration")]
 void CreateLightSamplesRayGen()
 {
@@ -201,25 +220,25 @@ void CreateLightSamplesRayGen()
 			float cosTheta = 0.f;
 			float p_hat = 0.f;
 
-			// Get previous reservoir
-			Reservoir prev_reservoir = { 0, 0, 0, 0 };
+			//// Get previous reservoir
+			//Reservoir prev_reservoir = { 0, 0, 0, 0 };
 
-			if (gFrameCount > 0)
-			{
-				float4 prevScreenPos = mul(worldPos, gLastCameraMatrix);
-				prevScreenPos /= prevScreenPos.w;
+			//if (gFrameCount > 0)
+			//{
+			//	float4 prevScreenPos = mul(worldPos, gLastCameraMatrix);
+			//	prevScreenPos /= prevScreenPos.w;
 
-				uint2 prevIndex = pixelIndex;
-				prevIndex.x = ((prevScreenPos.x + 1.f) * 0.5f) * (float)dim.x;
-				prevIndex.y = ((1.f - prevScreenPos.y) * 0.5f) * (float)dim.y;
+			//	uint2 prevIndex = pixelIndex;
+			//	prevIndex.x = ((prevScreenPos.x + 1.f) * 0.5f) * (float)dim.x;
+			//	prevIndex.y = ((1.f - prevScreenPos.y) * 0.5f) * (float)dim.y;
 
-				if (prevIndex.x >= 0 && prevIndex.x < dim.x && prevIndex.y >= 0 && prevIndex.y < dim.y) {
-					prev_reservoir = createReservoir(gPrevReservoirs[prevIndex]);
-				}
-			}
+			//	if (prevIndex.x >= 0 && prevIndex.x < dim.x && prevIndex.y >= 0 && prevIndex.y < dim.y) {
+			//		prev_reservoir = createReservoir(gPrevReservoirs[prevIndex]);
+			//	}
+			//}
 
-			// Generate initial candidate light samples
-			for (int i = 0; i < min(gLightsCount, 32); i++) {
+			// Generate initial candidate light samples (M = 32)
+			for (int i = 0; i < min(gLightsCount, gLightSamples); i++) {
 				// Randomly pick a light to sample
 				int light = min(int(nextRand(randSeed) * gLightsCount), gLightsCount - 1);
 				getLightData(light, worldPos.xyz, lightDirection, lightIntensity, dist);
@@ -228,19 +247,17 @@ void CreateLightSamplesRayGen()
 				float p = 1.f / float(gLightsCount);
 				cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
 
-				float3 f = difMatlColor.rgb / M_PI;
-				float3 Le = lightIntensity;
-				float G = cosTheta / (dist * dist);
-				float3 brdf = f * Le * G;
-				p_hat = length(brdf) / p;
-				updateReservoir(reservoir, float(light), p_hat, randSeed);
+				// Evaluate p_hat
+				p_hat = evaluateBSDF(difMatlColor.rgb, lightIntensity, cosTheta, dist);
+				updateReservoir(reservoir, float(light), p_hat / p, randSeed);
 			}
 
-			// Calculate p_hat for reservoir's light
+			// Calculate p_hat(r.y) for reservoir's light
 			getLightData(reservoir.y, worldPos.xyz, lightDirection, lightIntensity, dist);
 			cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
-			p_hat = length((difMatlColor.rgb / M_PI) * lightIntensity * cosTheta / (dist * dist));
+			p_hat = evaluateBSDF(difMatlColor.rgb, lightIntensity, cosTheta, dist);
 
+			// Update reservoir weight
 			if (p_hat == 0.f) {
 				reservoir.W = 0.f;
 			}
@@ -260,6 +277,13 @@ void CreateLightSamplesRayGen()
 			{
 				// Temporal reuse
 				Reservoir tempReservoir = { 0, 0, 0, 0 };
+
+				// Get previous reservoir
+				Reservoir prev_reservoir = { 0, 0, 0, 0 };
+				uint2 prevIndex = pickTemporalNeighbor(worldPos, pixelIndex, dim);
+				if (prevIndex.x != -1 && prevIndex.y != -1) {
+					prev_reservoir = createReservoir(gPrevReservoirs[prevIndex]);
+				}
 
 				// Add current reservoir
 				updateReservoir(tempReservoir, reservoir.y, p_hat * reservoir.W * reservoir.M, randSeed);

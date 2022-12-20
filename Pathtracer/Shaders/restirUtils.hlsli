@@ -25,13 +25,20 @@ void updateReservoir(inout Reservoir res, in float xi, in float wi, inout uint r
 	}
 }
 
-//Reservoir combineReservoirs(Reservoir curr, Reservoir prev, in uint randSeed) {
-//	Reservoir merged = { 0, 0, 0, 0 };
-//	updateReservoir(merged, curr.weight, curr.lightSample, randSeed);
-//	updateReservoir(merged, prev.weight, prev.lightSample, randSeed);
-//	merged.M = curr.M + prev.M;
-//	return merged;
-//}
+Reservoir combineReservoirs(Reservoir curr, Reservoir prev, in uint randSeed) {
+	Reservoir merged = { 0, 0, 0, 0 };
+	updateReservoir(merged, curr.y, curr.W, randSeed);
+	updateReservoir(merged, prev.y, prev.W, randSeed);
+	merged.M = curr.M + prev.M;
+	return merged;
+}
+
+float evaluateBSDF(float3 albedo, float3 lightIntensity, float cosTheta, float lightDist) {
+	float3 f = albedo / M_PI;
+	float3 Le = lightIntensity;
+	float G = cosTheta / (lightDist * lightDist);
+	return length(f * Le * G);
+}
 
 // Halton sequence - https://en.wikipedia.org/wiki/Halton_sequence
 float halton(inout uint i, uint b)
