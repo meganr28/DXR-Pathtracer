@@ -81,23 +81,23 @@ float3 lambertianDirect(inout uint rndSeed, float3 hit, float3 norm, float3 diff
 	return color;
 }
 
-uint2 getSpatialNeighborIndex(uint2 pixelIndex, uint2 dim, int radius, inout uint randSeed) {
+uint2 getSpatialNeighborIndex(uint2 pixelIndex, uint2 dim, inout uint randSeed) {
 	uint2 neighborIndex = uint2(0, 0);
 	uint2 neighborOffset = uint2(0, 0);
 
-	// METHOD 1
-	//float r = radius * nextRand(randSeed);
-	//float angle = 2.0f * M_PI * nextRand(randSeed);
-	//float2 neighborIndex2 = pixelIndex;
-	//neighborIndex2.x += r * cos(angle);
-	//neighborIndex2.y += r * sin(angle);
-	//uint2 u_neighborIndex = uint2(neighborIndex2);
-	//u_neighborIndex.x = max(0, min(u_neighborIndex.x, dim.x - 1));
-	//u_neighborIndex.y = max(0, min(u_neighborIndex.y, dim.y - 1));
+	// Alternative method
+	/*float r = radius * nextRand(randSeed);
+	float angle = 2.0f * M_PI * nextRand(randSeed);
+	float2 neighborIndex2 = pixelIndex;
+	neighborIndex2.x += r * cos(angle);
+	neighborIndex2.y += r * sin(angle);
+	uint2 u_neighborIndex = uint2(neighborIndex2);
+	u_neighborIndex.x = max(0, min(u_neighborIndex.x, dim.x - 1));
+	u_neighborIndex.y = max(0, min(u_neighborIndex.y, dim.y - 1));*/
 
 	// Calculate neighbor offset -> [0, 1] -> [0, 2 * NEIGHBOR_RADIUS] -> [-NEIGHBOR_RADIUS, NEIGHBOR_RADIUS]
-	neighborOffset.x = int(nextRand(randSeed) * 2 * radius) - radius;
-	neighborOffset.y = int(nextRand(randSeed) * 2 * radius) - radius;
+	neighborOffset.x = int(nextRand(randSeed) * 2 * gSpatialRadius) - gSpatialRadius;
+	neighborOffset.y = int(nextRand(randSeed) * 2 * gSpatialRadius) - gSpatialRadius;
 
 	// Clamp index
 	neighborIndex.x = max(0, min(pixelIndex.x + neighborOffset.x, dim.x - 1));
@@ -115,15 +115,17 @@ void SpatialReuseRayGen()
 	uint2 dim = DispatchRaysDimensions().xy;
 
 	// Read G-buffer data
-	float4 worldPos = gPos[pixelIndex];
-	float4 worldNorm = gNorm[pixelIndex];
-	float4 difMatlColor = gDiffuseMtl[pixelIndex];
+	GBuffer gBuffer;
+	gBuffer.pos = gPos[pixelIndex];
+	gBuffer.norm = gNorm[pixelIndex];
+	gBuffer.color = gDiffuseMtl[pixelIndex];
 
-	float3 albedo = difMatlColor.rgb;
+	float3 albedo = gBuffer.color.rgb;
 
 	// Initialize random number generator
 	uint randSeed = initRand(pixelIndex.x + dim.x * pixelIndex.y, gFrameCount, 16);
 
+	// Get this pixel's reservoir
 	Reservoir reservoir = createReservoir(gCurrReservoirs[pixelIndex]);
 	if (gIter != 0) {
 		reservoir = createReservoir(gSpatialReservoirsOut[pixelIndex]);
@@ -132,7 +134,7 @@ void SpatialReuseRayGen()
 	Reservoir spatialReservoir = { 0, 0, 0, 0 };
 
 	float3 shadeColor = float3(0.f, 0.f, 0.f);
-	if (worldPos.w != 0)
+	if (gBuffer.pos.w != 0)
 	{
 		// To hold information about current light
 		float dist;
@@ -142,15 +144,16 @@ void SpatialReuseRayGen()
 		if (gEnableReSTIR && gDoSpatialReuse)
 		{
 			// Combine current reservoir
-			getLightData(reservoir.y, worldPos.xyz, lightDirection, lightIntensity, dist);
-			float cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
-			float p_hat = length((difMatlColor.rgb / M_PI) * lightIntensity * cosTheta / (dist * dist));
+			//float p_hat = evaluatePHat()
+			getLightData(reservoir.y, gBuffer.pos.xyz, lightDirection, lightIntensity, dist);
+			float cosTheta = saturate(dot(gBuffer.norm.xyz, lightDirection));
+			float p_hat = length((gBuffer.color.rgb / M_PI) * lightIntensity * cosTheta / (dist * dist));
 			updateReservoir(spatialReservoir, reservoir.y, p_hat * reservoir.W * reservoir.M, randSeed);
 
 			float lightCount = reservoir.M;
 			for (int i = 0; i < gSpatialNeighbors; ++i)
 			{
-				uint2 neighborIndex = getSpatialNeighborIndex(pixelIndex, dim, gSpatialRadius, randSeed);
+				uint2 neighborIndex = getSpatialNeighborIndex(pixelIndex, dim, randSeed);
 				Reservoir neighborReservoir = createReservoir(gCurrReservoirs[neighborIndex]);
 				if (gIter != 0) {
 					neighborReservoir = createReservoir(gSpatialReservoirsOut[neighborIndex]);
@@ -159,15 +162,15 @@ void SpatialReuseRayGen()
 				float4 neighborNorm = gNorm[neighborIndex];
 
 				// Check that the angle between the normals are within 25 degrees
-				if ((dot(worldNorm.xyz, neighborNorm.xyz)) < 0.906) continue;
+				if ((dot(gBuffer.norm.xyz, neighborNorm.xyz)) < 0.906) continue;
 
 				// Check if neighbor exceeds 10% of current pixel's depth
-				if (neighborNorm.w > 1.1f * worldNorm.w || neighborNorm.w < 0.9f * worldNorm.w) continue;
+				if (neighborNorm.w > 1.1f * gBuffer.norm.w || neighborNorm.w < 0.9f * gBuffer.norm.w) continue;
 
 				// Combine neighbor's reservoir
-				getLightData(neighborReservoir.y, worldPos.xyz, lightDirection, lightIntensity, dist);
-				cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
-				p_hat = length((difMatlColor.rgb / M_PI) * lightIntensity * cosTheta / (dist * dist));
+				getLightData(neighborReservoir.y, gBuffer.pos.xyz, lightDirection, lightIntensity, dist);
+				cosTheta = saturate(dot(gBuffer.norm.xyz, lightDirection));
+				p_hat = length((gBuffer.color.rgb / M_PI) * lightIntensity * cosTheta / (dist * dist));
 				updateReservoir(spatialReservoir, neighborReservoir.y, p_hat * neighborReservoir.W * neighborReservoir.M, randSeed);
 			
 				lightCount += neighborReservoir.M;
@@ -177,9 +180,9 @@ void SpatialReuseRayGen()
 			spatialReservoir.M = lightCount;
 
 			// Update weight
-			getLightData(spatialReservoir.y, worldPos.xyz, lightDirection, lightIntensity, dist);
-			cosTheta = saturate(dot(worldNorm.xyz, lightDirection));
-			p_hat = length((difMatlColor.rgb / M_PI) * lightIntensity * cosTheta / (dist * dist));
+			getLightData(spatialReservoir.y, gBuffer.pos.xyz, lightDirection, lightIntensity, dist);
+			cosTheta = saturate(dot(gBuffer.norm.xyz, lightDirection));
+			p_hat = length((gBuffer.color.rgb / M_PI) * lightIntensity * cosTheta / (dist * dist));
 
 			if (p_hat == 0.f) {
 				spatialReservoir.W = 0.f;
@@ -189,14 +192,14 @@ void SpatialReuseRayGen()
 			}
 
 			// Evaluate visibility for initial candidates
-			float shadowed = shadowRayVisibility(worldPos.xyz, lightDirection, gMinT, dist);
+			float shadowed = shadowRayVisibility(gBuffer.pos.xyz, lightDirection, gMinT, dist);
 			if (shadowed <= 0.001f) {
 				spatialReservoir.W = 0.f;
 			}
 		}
 		else
 		{
-			shadeColor += lambertianDirect(randSeed, worldPos.xyz, worldNorm.xyz, difMatlColor.rgb);
+			shadeColor += lambertianDirect(randSeed, gBuffer.pos.xyz, gBuffer.norm.xyz, gBuffer.color.rgb);
 		}
 	}
 	else
