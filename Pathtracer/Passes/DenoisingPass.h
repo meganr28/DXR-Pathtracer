@@ -56,9 +56,9 @@ protected:
 	int32_t                       mIter = 0;
 	int32_t                       mTotalIter = 0;
 	int32_t                       mFilterSize = 80;       ///< A-Trous filter size
-	float                         mColorPhi = 0.1f;      ///< Color weight
-	float                         mNormalPhi = 0.2f;      ///< Normal weight
-	float                         mPositionPhi = 0.1f;    ///< Normal weight
+	float                         mColorPhi = 0.5f;       ///< Color weight
+	float                         mNormalPhi = 0.0625f;   ///< Normal weight
+	float                         mPositionPhi = 0.05f;   ///< Normal weight
 
 	// Counter to initialize thin lens random numbers each frame
 	uint32_t                      mFrameCount = 0x1456u;                        ///< A frame counter to act as seed for random number generator 

@@ -22,6 +22,7 @@
 #include "shadowRay.hlsli"
 
 #define PI                 3.14159265f
+#define SPATIAL_LENGTH     6            // length of pixel and reservoir array
 
 // Include and import common Falcor utilities and data structures
 import Raytracing;                   // Shared ray tracing specific functions & data
@@ -141,8 +142,8 @@ void SpatialReuseRayGen()
 		float3 lightIntensity;
 		float3 lightDirection;
 
-		uint2 q[6];
-		Reservoir r[6];
+		uint2 q[SPATIAL_LENGTH];
+		Reservoir r[SPATIAL_LENGTH];
 
 		if (gEnableReSTIR && gDoSpatialReuse)
 		{
@@ -166,8 +167,8 @@ void SpatialReuseRayGen()
 
 				float4 neighborNorm = gNorm[neighborIndex];
 
-				// Check that the angle between the normals are within 25 degrees
-				if ((dot(gBuffer.norm.xyz, neighborNorm.xyz)) < 0.906) continue;
+				// Check that the angle between the normals are within 25-50 degrees
+				if ((dot(gBuffer.norm.xyz, neighborNorm.xyz)) < 0.9) continue;
 
 				// Check if neighbor exceeds 10% of current pixel's depth
 				if (neighborNorm.w > 1.1f * gBuffer.norm.w || neighborNorm.w < 0.9f * gBuffer.norm.w) continue;
@@ -195,10 +196,10 @@ void SpatialReuseRayGen()
 #ifdef UNBIASED
 				float p_hat_orig = p_hat;
 				float Z = 0.f;
-				for (int i = 0; i < 6; i++) {
+				for (int i = 0; i < SPATIAL_LENGTH; i++) {
 					// Get gBuffer data
 					GBuffer pixelGBuffer;
-					pixelGBuffer.pos = gPos[q[i]]; // TODO: will need to store previous gBuffer data
+					pixelGBuffer.pos = gPos[q[i]];
 					pixelGBuffer.norm = gNorm[q[i]];
 					pixelGBuffer.color = gDiffuseMtl[q[i]];
 
