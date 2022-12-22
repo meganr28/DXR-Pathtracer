@@ -52,6 +52,9 @@ There are many interesting directions and possibilities for future work. This in
 ## References
 
 [1] Chris Wyman - ["A Gentle Introduction to DirectX Raytracing"](http://cwyman.org/code/dxrTutors/dxr_tutors.md.html) (ACM SIGGRAPH 2018 Course)
+
 [2] Bitterli et al. - [Spatiotemporal reservoir resampling for real-time ray tracing with dynamic direct lighting](https://research.nvidia.com/publication/2020-07_spatiotemporal-reservoir-resampling-real-time-ray-tracing-dynamic-direct) (ACM SIGGRAPH 2020)
+
 [3] Shubham Sachdeva - [Spatiotemporal Reservoir Resampling (ReSTIR) - Theory and Basic Implementation](https://gamehacker1999.github.io/posts/restir/)
+
 [4] Dammertz et al. [Edge-Avoiding À-Trous Wavelet Transform for Fast Global Illumination Filtering](https://jo.dreggn.org/home/2010_atrous.pdf) (HPG 2010)
